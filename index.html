@@ -830,7 +830,7 @@ body {
       history.push({role:'assistant', content: data.reply});
     } catch(err) {
       removeTyping();
-      addMsg('⚠ Cannot reach backend at localhost:5000. Start your Python server to connect.', 'bot');
+      addMsg('⚠ Cannot reach server at this moment. Try again later!', 'bot');
     }
     sendBtn.disabled = false;
     input.focus();
