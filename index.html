@@ -28,15 +28,15 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
+body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-body);
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-  }
+}
 
   /* animated background grid */
   body::before {
@@ -177,14 +177,14 @@
   }
 
   /* ── MAIN LAYOUT ── */
-  .layout {
+.layout {
     flex: 1;
     display: flex;
     position: relative;
     z-index: 10;
     overflow: hidden;
-    height: calc(100vh - 130px);
-  }
+    min-height: 0;
+}
 
   /* ── SIDEBAR ── */
   .sidebar {
@@ -297,17 +297,19 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-  }
+    min-height: 0;
+}
 
-  .messages {
+.messages {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: scroll;
     padding: 28px 48px;
     display: flex;
     flex-direction: column;
     gap: 20px;
     scroll-behavior: smooth;
-  }
+    min-height: 0;
+}
 
   .messages::-webkit-scrollbar { width: 4px; }
   .messages::-webkit-scrollbar-track { background: transparent; }
@@ -419,7 +421,8 @@
   .input-bar {
     padding: 16px 48px 20px;
     background: linear-gradient(0deg, rgba(14,15,16,0.95) 0%, transparent 100%);
-  }
+    flex-shrink: 0;
+}
 
   .input-wrap {
     display: flex;
