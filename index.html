@@ -24,14 +24,28 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-body);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  height: 100dvh; /* FIX */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* FIX */
+}
+
+.input-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+}
 
   body::before {
     content: '';
@@ -480,6 +494,9 @@
 </div>
 
 <script>
+
+
+
   const msgs = document.getElementById('messages');
   const input = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
@@ -498,6 +515,11 @@
     {title:'Breathing',text:'Box breathing (4-4-4-4) for 5 minutes reduces cortisol and anxiety fast.'},
   ];
   document.getElementById('dailyTip').innerHTML = `<strong>${tips[new Date().getDay()%tips.length].title}</strong>${tips[new Date().getDay()%tips.length].text}`;
+
+  window.addEventListener("resize", () => {
+  document.body.style.height = window.innerHeight + "px";
+});
+
 
   const modes = {
     chat:{label:'General Chat',desc:'Ask anything about fitness, nutrition, or mental wellness.'},
@@ -625,6 +647,8 @@
     sendBtn.disabled = false;
     input.focus();
   }
+
+  
 </script>
 </body>
 </html>
