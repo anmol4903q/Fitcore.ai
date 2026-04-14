@@ -446,9 +446,7 @@
       <div class="input-wrap">
         <textarea id="userInput" rows="1" placeholder="Ask about workouts, nutrition, mental health..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
         <div class="input-actions">
-          <button class="icon-btn" title="Clear chat" onclick="clearChat()">
-            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-          </button>
+        
           <button class="send-btn" id="sendBtn" onclick="sendMessage()">
             <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
@@ -659,17 +657,6 @@
     sendMessage();
   }
 
-  // ── CLEAR CHAT ──
-  function clearChat() {
-    msgs.innerHTML = '';
-    history = [];
-    // Also wipe localStorage so refresh doesn't bring old messages back
-    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-    qp.style.display = 'flex';
-    headerCompact = false;
-    header.classList.remove('compact');
-    addMsg("Chat cleared. What would you like to work on today?", 'bot');
-  }
 
   // ── SEND MESSAGE ──
   async function sendMessage() {
