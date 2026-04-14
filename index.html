@@ -24,28 +24,14 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  height: 100dvh; /* FIX */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.chat-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0; /* FIX */
-}
-
-.input-bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 20;
-}
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
   body::before {
     content: '';
@@ -210,7 +196,10 @@
   .stat-key { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
 
   /* ── CHAT AREA ── */
-  .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  .chat-area {
+    flex: 1; display: flex; flex-direction: column;
+    overflow: hidden; min-height: 0;
+  }
 
   .messages {
     flex: 1; overflow-y: scroll;
@@ -252,7 +241,6 @@
   .bubble.bot { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-top-left-radius: 3px; }
   .bubble.user { background: var(--storm); color: #f0f3f5; border-top-right-radius: 3px; }
 
-  /* markdown */
   .bubble strong { font-weight: 600; color: #c8d0d8; }
   .bubble em { font-style: italic; color: #b0bcc8; }
   .bubble.user strong { color: #fff; }
@@ -280,7 +268,12 @@
   .qp-btn:hover { background: var(--storm-dim); color: var(--text); border-color: var(--storm); }
 
   /* ── INPUT BAR ── */
-  .input-bar { padding: 12px 40px 16px; background: linear-gradient(0deg, rgba(14,15,16,0.97) 0%, transparent 100%); flex-shrink: 0; }
+  .input-bar {
+    position: sticky; bottom: 0; z-index: 20;
+    padding: 12px 40px 16px;
+    background: linear-gradient(0deg, rgba(14,15,16,0.97) 0%, transparent 100%);
+    flex-shrink: 0;
+  }
 
   .input-wrap {
     display: flex; align-items: flex-end; gap: 10px;
@@ -431,7 +424,7 @@
     <div class="profile-card">
       <div class="profile-label">Your Stats</div>
       <div class="profile-stats">
-        <div class="stat-item"><div class="stat-val">0</div><div class="stat-key">Sessions</div></div>
+        <div class="stat-item"><div class="stat-val" id="statSessions">0</div><div class="stat-key">Sessions</div></div>
         <div class="stat-item"><div class="stat-val">0</div><div class="stat-key">Plans</div></div>
         <div class="stat-item"><div class="stat-val">0</div><div class="stat-key">Days</div></div>
         <div class="stat-item"><div class="stat-val">0</div><div class="stat-key">Goals</div></div>
@@ -440,15 +433,7 @@
   </aside>
 
   <main class="chat-area">
-    <div class="messages" id="messages">
-      <div class="msg-row">
-        <div class="avatar bot">FC</div>
-        <div class="msg-col">
-          <div class="bubble bot">Hey! I'm <strong>FITCORE.AI</strong> — your personal fitness and mental wellness companion.<br><br>Tell me your goal and I'll build a plan around you. Whether it's weight loss, muscle gain, stress relief, or better sleep — I've got you covered.</div>
-          <div class="msg-time" id="initTime"></div>
-        </div>
-      </div>
-    </div>
+    <div class="messages" id="messages"></div>
 
     <div class="quick-prompts" id="quickPrompts">
       <button class="qp-btn" onclick="quickSend('Create a 7-day workout plan for beginners')">7-day beginner workout</button>
@@ -476,7 +461,7 @@
   <aside class="right-panel">
     <div>
       <div class="panel-section-label">Daily Tip</div>
-      <div class="tip-card" id="dailyTip"><strong>Recovery</strong>Rest days are not wasted days. Muscles grow during recovery, not during the workout itself.</div>
+      <div class="tip-card" id="dailyTip"></div>
     </div>
     <div>
       <div class="panel-section-label">Today's Metrics</div>
@@ -494,48 +479,46 @@
 </div>
 
 <script>
+  // ── DOM REFS ──
+  const msgs      = document.getElementById('messages');
+  const input     = document.getElementById('userInput');
+  const sendBtn   = document.getElementById('sendBtn');
+  const qp        = document.getElementById('quickPrompts');
+  const header    = document.getElementById('mainHeader');
 
+  // ── STATE ──
+  let history        = [];
+  let headerCompact  = false;
+  const STORAGE_KEY  = 'fitcore_history_v2';
 
-
-  const msgs = document.getElementById('messages');
-  const input = document.getElementById('userInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const qp = document.getElementById('quickPrompts');
-  const header = document.getElementById('mainHeader');
-  let history = [];
-  let headerCompact = false;
-
-  document.getElementById('initTime').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-
+  // ── TIPS ──
   const tips = [
-    {title:'Recovery',text:'Rest days are not wasted days. Muscles grow during recovery, not during the workout.'},
-    {title:'Hydration',text:'Drink 2–3L of water daily. Dehydration cuts performance by up to 20%.'},
-    {title:'Sleep',text:'7–9 hours of sleep regulates cortisol, hunger hormones, and recovery.'},
-    {title:'Consistency',text:'A mediocre plan done consistently beats a perfect plan done occasionally.'},
-    {title:'Breathing',text:'Box breathing (4-4-4-4) for 5 minutes reduces cortisol and anxiety fast.'},
+    {title:'Recovery',     text:'Rest days are not wasted days. Muscles grow during recovery, not during the workout.'},
+    {title:'Hydration',    text:'Drink 2–3L of water daily. Dehydration cuts performance by up to 20%.'},
+    {title:'Sleep',        text:'7–9 hours of sleep regulates cortisol, hunger hormones, and recovery.'},
+    {title:'Consistency',  text:'A mediocre plan done consistently beats a perfect plan done occasionally.'},
+    {title:'Breathing',    text:'Box breathing (4-4-4-4) for 5 minutes reduces cortisol and anxiety fast.'},
   ];
-  document.getElementById('dailyTip').innerHTML = `<strong>${tips[new Date().getDay()%tips.length].title}</strong>${tips[new Date().getDay()%tips.length].text}`;
+  const tip = tips[new Date().getDay() % tips.length];
+  document.getElementById('dailyTip').innerHTML = `<strong>${tip.title}</strong>${tip.text}`;
 
-  window.addEventListener("resize", () => {
-  document.body.style.height = window.innerHeight + "px";
-});
-
-
+  // ── MODES ──
   const modes = {
-    chat:{label:'General Chat',desc:'Ask anything about fitness, nutrition, or mental wellness.'},
-    workout:{label:'Workout Planner',desc:'Building personalised training programs.'},
-    diet:{label:'Diet Advisor',desc:'Nutrition guidance and meal planning.'},
-    mental:{label:'Mental Wellness',desc:'Stress, sleep, and mindfulness support.'},
-    history:{label:'Session History',desc:'Reviewing your past sessions.'},
-    settings:{label:'Settings',desc:'Configuring your profile.'},
+    chat:     {label:'General Chat',     desc:'Ask anything about fitness, nutrition, or mental wellness.'},
+    workout:  {label:'Workout Planner',  desc:'Building personalised training programs.'},
+    diet:     {label:'Diet Advisor',     desc:'Nutrition guidance and meal planning.'},
+    mental:   {label:'Mental Wellness',  desc:'Stress, sleep, and mindfulness support.'},
+    history:  {label:'Session History',  desc:'Reviewing your past sessions.'},
+    settings: {label:'Settings',         desc:'Configuring your profile.'},
   };
 
   function setMode(m, el) {
-    document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('activeMode').innerHTML = `<strong>${modes[m].label}</strong>${modes[m].desc}`;
   }
 
+  // ── HEADER COLLAPSE ──
   function collapseHeader() {
     if (!headerCompact) {
       headerCompact = true;
@@ -543,15 +526,17 @@
     }
   }
 
+  // ── INPUT HELPERS ──
   function autoResize(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }
 
   function handleKey(e) {
-    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
+  // ── MARKDOWN PARSER ──
   function parseMarkdown(text) {
     return text
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -566,43 +551,57 @@
       .replace(/^---$/gm,'<hr>')
       .replace(/^\s*[-*•] (.+)$/gm,'<li>$1</li>')
       .replace(/^\s*\d+\. (.+)$/gm,'<li>$1</li>')
-      .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m=>`<ul>${m}</ul>`)
+      .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
       .replace(/\n(?!<)/g,'<br>');
   }
 
-  function addMsg(text, role) {
+  // ── RENDER A SINGLE MESSAGE (no animation, for restore) ──
+  function renderMsg(text, role, time, animate) {
     const row = document.createElement('div');
     row.className = 'msg-row ' + role;
+    if (!animate) row.style.animation = 'none';
+
     const av = document.createElement('div');
     av.className = 'avatar ' + role;
-    av.textContent = role==='bot' ? 'FC' : '👤';
+    av.textContent = role === 'bot' ? 'FC' : '👤';
+
     const col = document.createElement('div');
     col.className = 'msg-col';
+
     const bub = document.createElement('div');
     bub.className = 'bubble ' + role;
-    bub.innerHTML = role==='bot'
+    bub.innerHTML = role === 'bot'
       ? parseMarkdown(text)
       : text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-    const time = document.createElement('div');
-    time.className = 'msg-time';
-    time.textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    col.appendChild(bub); col.appendChild(time);
-    row.appendChild(av); row.appendChild(col);
+
+    const ts = document.createElement('div');
+    ts.className = 'msg-time';
+    ts.textContent = time || new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    col.appendChild(bub);
+    col.appendChild(ts);
+    row.appendChild(av);
+    row.appendChild(col);
     msgs.appendChild(row);
     msgs.scrollTop = msgs.scrollHeight;
     return bub;
   }
 
+  function addMsg(text, role) {
+    return renderMsg(text, role, null, true);
+  }
+
+  // ── TYPING INDICATOR ──
   function addTyping() {
     const row = document.createElement('div');
     row.className = 'msg-row'; row.id = 'typingRow';
-    const av = document.createElement('div');
-    av.className = 'avatar bot'; av.textContent = 'FC';
+    const av  = document.createElement('div'); av.className = 'avatar bot'; av.textContent = 'FC';
     const col = document.createElement('div'); col.className = 'msg-col';
     const bub = document.createElement('div'); bub.className = 'bubble bot';
     bub.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
     col.appendChild(bub); row.appendChild(av); row.appendChild(col);
-    msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
   }
 
   function removeTyping() {
@@ -610,45 +609,116 @@
     if (t) t.remove();
   }
 
-  function quickSend(text) {
-    input.value = text; qp.style.display = 'none'; sendMessage();
+  // ── PERSISTENCE ──
+  // Each entry: { role: 'user'|'assistant', content: string, time: string }
+  function saveHistory() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch(e) {
+      // localStorage full or blocked — fail silently
+    }
   }
 
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const saved = JSON.parse(raw);
+      if (!Array.isArray(saved) || saved.length === 0) return false;
+      history = saved;
+      saved.forEach(msg => {
+        renderMsg(msg.content, msg.role === 'assistant' ? 'bot' : 'user', msg.time || '', false);
+      });
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  // ── INITIALISE ──
+  (function init() {
+    const hadHistory = loadHistory();
+    if (!hadHistory) {
+      addMsg("Hey! I'm **FITCORE.AI** — your personal fitness and mental wellness companion.\n\nTell me your goal and I'll build a plan around you. Whether it's weight loss, muscle gain, stress relief, or better sleep — I've got you covered.", 'bot');
+    } else {
+      collapseHeader();
+      qp.style.display = 'none';
+    }
+  })();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+  });
+
+  // ── QUICK SEND ──
+  function quickSend(text) {
+    input.value = text;
+    qp.style.display = 'none';
+    sendMessage();
+  }
+
+  // ── CLEAR CHAT ──
   function clearChat() {
-    msgs.innerHTML = ''; history = []; qp.style.display = 'flex';
+    msgs.innerHTML = '';
+    history = [];
+    // Also wipe localStorage so refresh doesn't bring old messages back
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+    qp.style.display = 'flex';
+    headerCompact = false;
+    header.classList.remove('compact');
     addMsg("Chat cleared. What would you like to work on today?", 'bot');
   }
 
+  // ── SEND MESSAGE ──
   async function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
-    input.value = ''; input.style.height = 'auto';
+
+    input.value = '';
+    input.style.height = 'auto';
     sendBtn.disabled = true;
     qp.style.display = 'none';
     collapseHeader();
+
+    const userTime = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    // Render user message
     addMsg(text, 'user');
-    history.push({role:'user', content:text});
+
+    // Push to history with timestamp
+    history.push({ role: 'user', content: text, time: userTime });
+    saveHistory();
+
     addTyping();
 
     try {
       const res = await fetch('https://fitcore-backend-ib8k.onrender.com/chat', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({message:text, history:history})
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          history: history.map(m => ({ role: m.role, content: m.content }))
+        })
       });
+
       const data = await res.json();
       removeTyping();
+
+      const botTime = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
       addMsg(data.reply, 'bot');
-      history.push({role:'assistant', content:data.reply});
+      history.push({ role: 'assistant', content: data.reply, time: botTime });
+      saveHistory();
+
     } catch(err) {
       removeTyping();
       addMsg('Cannot reach backend. Make sure your server is running.', 'bot');
     }
+
     sendBtn.disabled = false;
     input.focus();
   }
-
-  
 </script>
 </body>
 </html>
