@@ -215,8 +215,3 @@ def profile():
     user_id = request.args.get("user_id", "default_user")
     return jsonify(get_profile(user_id))
 
-
-if __name__ == "__main__":
-    init_db()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
