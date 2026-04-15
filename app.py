@@ -9,28 +9,13 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-
+# Initialize DB early (IMPORTANT)
 DB_FILE = "fitcore_memory.db"
-
-SYSTEM_PROMPT = """You are FITCORE.AI, a smart and friendly mental and physical fitness assistant.
-
-You remember everything the user has told you in past conversations — their name, age, fitness goals, health conditions, diet preferences, past workout plans, and progress. Always refer back to what you know about them naturally, like a personal trainer who knows their client well.
-
-When giving workout plans, diet advice, or mental wellness tips:
-- Be specific and practical, not generic
-- Use bullet points and headers to organize responses also avoid long paragraphs as much
-- Reference what the user has told you before when relevant
-- Keep responses clear and motivating but honest
-
-Never forget what the user has shared. Build on previous conversations."""
-
 
 def get_db():
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
-
 
 def init_db():
     conn = get_db()
@@ -59,6 +44,17 @@ def init_db():
     conn.commit()
     conn.close()
 
+# 👉 THIS WAS YOUR MISSING PIECE
+init_db()
+
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+SYSTEM_PROMPT = """You are FITCORE.AI, a smart and friendly mental and physical fitness assistant.
+
+You remember everything the user has told you in past conversations — their name, age, fitness goals, health conditions, diet preferences, past workout plans, and progress.
+
+Be practical, structured, and refer to past info naturally.
+"""
 
 def get_or_create_user(user_id):
     conn = get_db()
@@ -71,7 +67,6 @@ def get_or_create_user(user_id):
         conn.commit()
     conn.close()
 
-
 def save_message(user_id, role, content):
     conn = get_db()
     conn.execute(
@@ -81,18 +76,14 @@ def save_message(user_id, role, content):
     conn.commit()
     conn.close()
 
-
 def get_history(user_id, limit=40):
-    """Get last N messages for this user from the database."""
     conn = get_db()
     rows = conn.execute(
         "SELECT role, content FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT ?",
         (user_id, limit)
     ).fetchall()
     conn.close()
-    # reverse so oldest first
     return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
-
 
 def get_profile(user_id):
     conn = get_db()
@@ -101,7 +92,6 @@ def get_profile(user_id):
     if row:
         return json.loads(row["profile_data"])
     return {}
-
 
 def save_profile(user_id, profile_data):
     conn = get_db()
@@ -112,41 +102,35 @@ def save_profile(user_id, profile_data):
     conn.commit()
     conn.close()
 
-
 def extract_profile_info(user_id, message):
-    """Use AI to extract and update profile info from messages."""
     profile = get_profile(user_id)
 
-    extraction_prompt = f"""From this user message, extract any personal information mentioned.
-Current known profile: {json.dumps(profile)}
-User message: "{message}"
+    prompt = f"""Extract user info from message.
 
-If new information is found (name, age, weight, height, fitness goal, health conditions, diet preference, experience level), update and return the full profile as JSON only.
-If nothing new, return the existing profile as JSON only.
-Return ONLY valid JSON, no explanation."""
+Current profile: {json.dumps(profile)}
+Message: "{message}"
+
+Return updated JSON only."""
 
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": extraction_prompt}],
+            messages=[{"role": "user", "content": prompt}],
             max_tokens=300,
         )
         updated = json.loads(response.choices[0].message.content.strip())
         save_profile(user_id, updated)
-    except Exception:
+    except:
         pass
 
-
 def build_memory_context(user_id):
-    """Build a context string from the user's profile to prepend to system prompt."""
     profile = get_profile(user_id)
     if not profile:
         return ""
-    lines = ["What I know about this user:"]
-    for key, val in profile.items():
-        lines.append(f"- {key.replace('_', ' ').title()}: {val}")
+    lines = ["User info:"]
+    for k, v in profile.items():
+        lines.append(f"- {k}: {v}")
     return "\n".join(lines)
-
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -158,27 +142,19 @@ def chat():
         return jsonify({"error": "Empty message"}), 400
 
     get_or_create_user(user_id)
-
-    # extract profile info in background
     extract_profile_info(user_id, message)
 
-    # get conversation history from DB
-    history = get_history(user_id, limit=40)
+    history = get_history(user_id)
+    memory = build_memory_context(user_id)
 
-    # build system prompt with memory context
-    memory_context = build_memory_context(user_id)
-    full_system = SYSTEM_PROMPT
-    if memory_context:
-        full_system += f"\n\n{memory_context}"
+    system = SYSTEM_PROMPT + ("\n\n" + memory if memory else "")
 
-    # save user message
     save_message(user_id, "user", message)
 
-    # call Groq
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-            {"role": "system", "content": full_system},
+            {"role": "system", "content": system},
             *history,
             {"role": "user", "content": message}
         ],
@@ -186,19 +162,14 @@ def chat():
     )
 
     reply = response.choices[0].message.content
-
-    # save bot reply
     save_message(user_id, "assistant", reply)
 
-    return jsonify({"reply": reply, "user_id": user_id})
-
+    return jsonify({"reply": reply})
 
 @app.route("/history", methods=["GET"])
 def history():
     user_id = request.args.get("user_id", "default_user")
-    msgs = get_history(user_id, limit=100)
-    return jsonify({"history": msgs})
-
+    return jsonify({"history": get_history(user_id, 100)})
 
 @app.route("/clear", methods=["POST"])
 def clear():
@@ -209,9 +180,7 @@ def clear():
     conn.close()
     return jsonify({"status": "cleared"})
 
-
 @app.route("/profile", methods=["GET"])
 def profile():
     user_id = request.args.get("user_id", "default_user")
     return jsonify(get_profile(user_id))
-
