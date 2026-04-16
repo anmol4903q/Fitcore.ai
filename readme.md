@@ -41,8 +41,6 @@ FITCORE.AI is a chatbot-based fitness and wellness assistant designed to help us
 fitcore-ai/
 │── app.py
 │── requirements.txt
-│── static/
-│── templates/
 │── README.md
 ```
 
