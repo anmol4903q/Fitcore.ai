@@ -232,8 +232,6 @@ def get_progress():
     conn.close()
     return jsonify({"progress": [dict(r) for r in rows]})
 
-# ── TASKS ──────────────────────────────────────────────
-
 @app.route("/tasks", methods=["POST"])
 def save_tasks():
     data = request.json
@@ -297,7 +295,7 @@ def tasks_history():
     user_id = request.args.get("user_id", "default_user")
     conn = get_db()
 
-    # Completion % grouped by date
+
     by_date = conn.execute("""
         SELECT date,
                ROUND(100.0 * SUM(completed) / COUNT(*), 1) as pct
@@ -307,7 +305,6 @@ def tasks_history():
         ORDER BY date ASC
     """, (user_id,)).fetchall()
 
-    # Completion % grouped by week
     by_week = conn.execute("""
         SELECT week_number,
                ROUND(100.0 * SUM(completed) / COUNT(*), 1) as pct
