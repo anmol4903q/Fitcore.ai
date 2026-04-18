@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITCORE.AI — Workout Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--storm:#657079;--dark:#47484a;--storm-light:#8a9aa6;--storm-dim:rgba(101,112,121,0.15);--bg:#0e0f10;--surface:#1e2024;--border:rgba(101,112,121,0.2);--text:#e8eaec;--text-muted:#7a8490;--font-display:'Bebas Neue',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;--green:#4caf7d;--red:#e05c5c;--push:#e07a5f;--pull:#5b8dee;--legs:#4caf7d;--core:#a78bfa;--rest:#657079;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(101,112,121,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(101,112,121,0.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+header{position:relative;z-index:20;border-bottom:1px solid var(--border);background:rgba(14,15,16,0.92);backdrop-filter:blur(12px);flex-shrink:0;display:flex;align-items:center;padding:10px 24px;gap:12px;}
+.logo-icon{border:1.5px solid var(--storm);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;}
+.logo-icon svg{width:14px;height:14px;stroke:var(--storm-light);fill:none;stroke-width:1.8;stroke-linecap:round;}
+.logo-text{font-family:var(--font-display);font-size:22px;letter-spacing:2px;color:var(--text);line-height:1;}
+.logo-text span{color:var(--storm-light);}
+.logo-dot{display:inline-block;width:5px;height:5px;background:var(--storm);border-radius:50%;margin-left:2px;vertical-align:super;animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+.compact-status{display:flex;align-items:center;gap:5px;margin-left:auto;}
+.status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:statusPulse 2s ease-in-out infinite;}
+@keyframes statusPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,125,.4);}50%{box-shadow:0 0 0 4px rgba(76,175,125,0);}}
+.compact-status span{font-family:var(--font-mono);font-size:9px;color:var(--green);letter-spacing:1px;}
+.layout{flex:1;display:flex;position:relative;z-index:10;overflow:hidden;min-height:0;}
+.sidebar{width:240px;border-right:1px solid var(--border);background:rgba(20,21,23,.8);display:flex;flex-direction:column;padding:16px 14px;gap:6px;flex-shrink:0;overflow-y:auto;}
+.sidebar-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;padding:0 4px;margin-bottom:4px;}
+.sidebar-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:13px;cursor:pointer;text-align:left;transition:all .15s;text-decoration:none;width:100%;}
+.sidebar-btn:hover,.sidebar-btn.active{background:var(--storm-dim);border-color:var(--border);color:var(--text);}
+.sidebar-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;flex-shrink:0;}
+.sidebar-divider{height:1px;background:var(--border);margin:6px 0;}
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.messages{flex:1;overflow-y:scroll;padding:24px 40px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth;min-height:0;}
+.messages::-webkit-scrollbar{width:4px;}
+.messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.msg-row{display:flex;gap:12px;max-width:760px;animation:fadeUp .25s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.msg-row.user{align-self:flex-end;flex-direction:row-reverse;}
+.avatar{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;margin-top:2px;}
+.avatar.bot{background:linear-gradient(135deg,var(--storm),var(--dark));color:#fff;font-family:var(--font-display);letter-spacing:1px;}
+.avatar.user{background:var(--surface);border:1px solid var(--border);color:var(--storm-light);font-size:13px;}
+.bubble{padding:11px 15px;border-radius:12px;font-size:14px;line-height:1.65;max-width:580px;}
+.bubble.bot{background:var(--surface);border:1px solid var(--border);color:var(--text);border-top-left-radius:3px;}
+.bubble.user{background:var(--storm);color:#f0f3f5;border-top-right-radius:3px;}
+.bubble strong{font-weight:600;color:#c8d0d8;}
+.bubble.user strong{color:#fff;}
+.bubble ul,.bubble ol{padding-left:18px;margin:6px 0;display:flex;flex-direction:column;gap:3px;}
+.bubble li{font-size:14px;line-height:1.6;}
+.bubble h1,.bubble h2,.bubble h3{font-family:var(--font-display);letter-spacing:1px;color:var(--storm-light);margin:10px 0 4px;}
+.bubble h1{font-size:20px;}.bubble h2{font-size:17px;}.bubble h3{font-size:15px;}
+.bubble code{font-family:var(--font-mono);font-size:12px;background:rgba(101,112,121,.2);padding:1px 5px;border-radius:4px;}
+.bubble hr{border:none;border-top:1px solid var(--border);margin:8px 0;}
+.msg-time{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:4px;padding:0 4px;}
+.msg-col{display:flex;flex-direction:column;}
+.quick-prompts{display:flex;flex-wrap:wrap;gap:8px;padding:0 40px 8px;flex-shrink:0;}
+.qp-btn{padding:6px 14px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:12px;cursor:pointer;transition:all .15s;}
+.qp-btn:hover{background:var(--storm-dim);color:var(--text);border-color:var(--storm);}
+.input-bar{padding:12px 40px 16px;background:linear-gradient(0deg,rgba(14,15,16,.97) 0%,transparent 100%);flex-shrink:0;}
+.input-wrap{display:flex;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 12px;transition:border-color .2s;}
+.input-wrap:focus-within{border-color:var(--storm);}
+#userInput{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font-body);font-size:14px;resize:none;max-height:120px;line-height:1.5;min-height:22px;}
+#userInput::placeholder{color:var(--text-muted);}
+.send-btn{width:34px;height:34px;border-radius:9px;border:none;background:var(--storm);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.send-btn:hover{background:var(--storm-light);transform:scale(1.04);}
+.send-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.send-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
+.input-hint{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-align:center;margin-top:6px;letter-spacing:.5px;}
+.typing-dots{display:flex;gap:4px;align-items:center;padding:4px 2px;}
+.typing-dots span{width:6px;height:6px;background:var(--storm-light);border-radius:50%;animation:dot 1.2s ease-in-out infinite;}
+.typing-dots span:nth-child(2){animation-delay:.2s;}
+.typing-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dot{0%,80%,100%{transform:scale(.7);opacity:.4;}40%{transform:scale(1);opacity:1;}}
+.right-panel{width:210px;border-left:1px solid var(--border);background:rgba(20,21,23,.8);padding:16px 14px;display:flex;flex-direction:column;gap:14px;flex-shrink:0;overflow-y:auto;}
+.panel-section-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;}
+.tip-card{padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--storm-dim);font-size:12px;color:var(--text-muted);line-height:1.6;}
+.tip-card strong{display:block;color:var(--storm-light);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;font-weight:500;}
+.toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:var(--font-body);color:var(--text);animation:toastIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.toast.success{border-color:rgba(76,175,125,.4);color:var(--green);}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@media(max-width:700px){.sidebar,.right-panel{display:none;}.messages{padding:16px 14px;}.bubble{font-size:13px;max-width:calc(100vw - 80px);}.quick-prompts{padding:0 14px 8px;}.input-bar{padding:10px 14px 14px;}.input-hint{display:none;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M4 12h4M16 12h4M12 4v4M12 16v4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9l-2.8 2.8"/></svg></div>
+  <div class="logo-text">FITCORE<span>.AI</span><span class="logo-dot"></span></div>
+  <div class="compact-status"><div class="status-dot"></div><span>ONLINE</span></div>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <a class="sidebar-btn" href="index.html"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat</a>
+    <a class="sidebar-btn active" href="workout.html"><svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 8h4M17 8h4M3 16h4M17 16h4"/></svg>Workout Planner</a>
+    <a class="sidebar-btn" href="diet.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Diet Advisor</a>
+    <a class="sidebar-btn" href="progress.html"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress Tracker</a>
+    <div class="sidebar-divider"></div>
+    <div class="tip-card" style="margin-top:auto;font-size:11px;">
+      <strong>Workout Mode</strong>
+      Ask for Push, Pull, Legs, Core plans or specific exercises.
+    </div>
+  </aside>
+  <main class="chat-area">
+    <div class="messages" id="messages"></div>
+    <div class="quick-prompts" id="quickPrompts">
+      <button class="qp-btn" onclick="quickSend('Create a 7-day weekly workout plan with Push, Pull, Legs, Core and Rest days')">7-day PPL plan</button>
+      <button class="qp-btn" onclick="quickSend('Give me a Push day workout routine for intermediate level')">Push day routine</button>
+      <button class="qp-btn" onclick="quickSend('Best home workout plan with no equipment')">No equipment plan</button>
+      <button class="qp-btn" onclick="quickSend('Create a muscle building program for beginners')">Beginner muscle plan</button>
+      <button class="qp-btn" onclick="quickSend('What is progressive overload and how do I apply it?')">Progressive overload</button>
+    </div>
+    <div class="input-bar">
+      <div class="input-wrap">
+        <textarea id="userInput" rows="1" placeholder="Ask for workout plans, exercises, training tips..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+      </div>
+      <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+    </div>
+  </main>
+  <aside class="right-panel">
+    <div><div class="panel-section-label">Active Mode</div><div class="tip-card"><strong>Workout Planner</strong>Building personalised training programs for any level.</div></div>
+    <div>
+      <div class="panel-section-label">Day Types</div>
+      <div class="tip-card" style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--push);flex-shrink:0;display:inline-block;"></span><span style="color:var(--push);">Push</span><span style="color:var(--text-muted);font-size:11px;margin-left:auto;">Chest · Shoulders · Triceps</span></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--pull);flex-shrink:0;display:inline-block;"></span><span style="color:var(--pull);">Pull</span><span style="color:var(--text-muted);font-size:11px;margin-left:auto;">Back · Biceps · Rear Delts</span></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--legs);flex-shrink:0;display:inline-block;"></span><span style="color:var(--legs);">Legs</span><span style="color:var(--text-muted);font-size:11px;margin-left:auto;">Quads · Hamstrings · Glutes</span></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--core);flex-shrink:0;display:inline-block;"></span><span style="color:var(--core);">Core</span><span style="color:var(--text-muted);font-size:11px;margin-left:auto;">Abs · Obliques · Lower back</span></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--rest);flex-shrink:0;display:inline-block;"></span><span style="color:var(--rest);">Rest</span><span style="color:var(--text-muted);font-size:11px;margin-left:auto;">Recovery & mobility</span></div>
+      </div>
+    </div>
+  </aside>
+</div>
+<script>
+const BACKEND='https://fitcore-backend-ib8k.onrender.com';
+const msgs=document.getElementById('messages'),input=document.getElementById('userInput'),sendBtn=document.getElementById('sendBtn'),qp=document.getElementById('quickPrompts');
+let chatLog=[];
+const STORAGE_KEY='fitcore_workout_chat_v1',PLAN_KEY='fitcore_plan_v1';
+function getUserId(){let id=localStorage.getItem('fitcore_user_id');if(!id){id='user_'+Math.random().toString(36).substr(2,9)+'_'+Date.now();localStorage.setItem('fitcore_user_id',id);}return id;}
+const USER_ID=getUserId();
+const DAY_TYPE_KEYWORDS={push:['push','chest','shoulder','tricep','bench','press','overhead'],pull:['pull','back','bicep','row','deadlift','lat','chin'],legs:['leg','squat','lunge','glute','hamstring','quad','calf','lower body'],core:['core','abs','plank','crunch','oblique','abdominal'],rest:['rest','recovery','active recovery','off','off day','stretch','yoga','walk']};
+function detectDayType(text){const low=text.toLowerCase();for(const[type,kws]of Object.entries(DAY_TYPE_KEYWORDS)){if(kws.some(k=>low.includes(k)))return type;}return'general';}
+function getTodayDayTypeFromPlan(planText){const lines=planText.split('\n');const todayDow=new Date().toLocaleDateString('en',{weekday:'long'}).toLowerCase();const dowAbbrs={monday:'mon',tuesday:'tue',wednesday:'wed',thursday:'thu',friday:'fri',saturday:'sat',sunday:'sun'};const todayAbbr=dowAbbrs[todayDow]||todayDow.slice(0,3);for(const line of lines){const low=line.toLowerCase();if(low.includes(todayDow)||low.includes(todayAbbr)){return detectDayType(line);}}return null;}
+function extractTasksFromBotMessage(text,dayType){const tasks=[];const lines=text.split('\n');for(const line of lines){const clean=line.replace(/^[\s\-\*•\d\.]+/,'').trim();if(clean.length<8||clean.length>120)continue;if(/^(day|week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(clean))continue;tasks.push({task_text:clean,day_type:dayType,badge:'workout'});}const seen=new Set();return tasks.filter(t=>{if(seen.has(t.task_text))return false;seen.add(t.task_text);return true;});}
+function parsePlanAndSaveTasks(botText){localStorage.setItem(PLAN_KEY,botText);const detectedType=getTodayDayTypeFromPlan(botText)||detectDayType(botText);const tasks=extractTasksFromBotMessage(botText,detectedType);if(tasks.length===0)return;saveTasks(tasks);}
+async function saveTasks(tasks){try{const res=await fetch(`${BACKEND}/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:USER_ID,tasks})});if(!res.ok)throw new Error();showToast('Workout tasks saved to Progress Tracker ✓','success');}catch(e){}}
+function parseMarkdown(text){return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>').replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/_(.+?)_/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/^---$/gm,'<hr>').replace(/^\s*[-*•] (.+)$/gm,'<li>$1</li>').replace(/^\s*\d+\. (.+)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>\n?)+/g,m=>`<ul>${m}</ul>`).replace(/\n(?!<)/g,'<br>');}
+function renderMsg(text,role,time,animate){const row=document.createElement('div');row.className='msg-row '+role;if(!animate)row.style.animation='none';const av=document.createElement('div');av.className='avatar '+role;av.textContent=role==='bot'?'FC':'👤';const col=document.createElement('div');col.className='msg-col';const bub=document.createElement('div');bub.className='bubble '+role;bub.innerHTML=role==='bot'?parseMarkdown(text):text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');const ts=document.createElement('div');ts.className='msg-time';ts.textContent=time||new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});col.appendChild(bub);col.appendChild(ts);row.appendChild(av);row.appendChild(col);msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;return bub;}
+function addMsg(text,role){return renderMsg(text,role,null,true);}
+function addTyping(){const row=document.createElement('div');row.className='msg-row';row.id='typingRow';const av=document.createElement('div');av.className='avatar bot';av.textContent='FC';const col=document.createElement('div');col.className='msg-col';const bub=document.createElement('div');bub.className='bubble bot';bub.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div>';col.appendChild(bub);row.appendChild(av);row.appendChild(col);msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;}
+function removeTyping(){const t=document.getElementById('typingRow');if(t)t.remove();}
+function quickSend(text){input.value=text;qp.style.display='none';sendMessage();}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function saveChatLog(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(chatLog.slice(-100)));}catch(e){}}
+function loadChatLog(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return false;const saved=JSON.parse(raw);if(!Array.isArray(saved)||!saved.length)return false;chatLog=saved;saved.forEach(m=>renderMsg(m.content,m.role==='assistant'?'bot':'user',m.time,false));return true;}catch(e){return false;}}
+const PLAN_TRIGGERS=['workout plan','week plan','weekly plan','7-day','push day','pull day','leg day','core day','rest day','ppl','routine'];
+async function sendMessage(){
+  const text=input.value.trim();if(!text)return;
+  input.value='';input.style.height='auto';sendBtn.disabled=true;qp.style.display='none';
+  const userTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  addMsg(text,'user');chatLog.push({role:'user',content:text,time:userTime});saveChatLog();addTyping();
+  try{
+    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,user_id:USER_ID,history:chatLog.slice(-20).map(m=>({role:m.role,content:m.content}))})});
+    if(!res.ok)throw new Error();const data=await res.json();removeTyping();
+    const botTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    addMsg(data.reply,'bot');chatLog.push({role:'assistant',content:data.reply,time:botTime});saveChatLog();
+    const textLow=text.toLowerCase(),replyLow=data.reply.toLowerCase();
+    if(PLAN_TRIGGERS.some(t=>textLow.includes(t)||replyLow.includes(t)))parsePlanAndSaveTasks(data.reply);
+  }catch(err){removeTyping();addMsg('Cannot reach the server right now. Wait 30 seconds and try again — the server may be waking up.','bot');}
+  sendBtn.disabled=false;input.focus();
+}
+let toastTimer=null;
+function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)ex.remove();const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3000);}
+(function init(){
+  const hadHistory=loadChatLog();
+  if(!hadHistory)addMsg("**Workout Planner** ready.\n\nTell me your level, available days, and goal — I'll build a structured Push/Pull/Legs/Core plan. Generated plans are automatically saved to your Progress Tracker.",'bot');
+  msgs.scrollTop=msgs.scrollHeight;
+})();
+</script>
+</body>
+</html>
