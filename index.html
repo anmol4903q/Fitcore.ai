@@ -3,57 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FITCORE.AI</title>
+<title>FITCORE.AI — Chat</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-:root {
-  --storm: #657079; --dark: #47484a; --storm-light: #8a9aa6;
-  --storm-dim: rgba(101,112,121,0.15);
-  --bg: #0e0f10; --surface: #1e2024; --surface2: #252830;
-  --border: rgba(101,112,121,0.2); --border2: rgba(101,112,121,0.12);
-  --text: #e8eaec; --text-muted: #7a8490;
-  --font-display: 'Bebas Neue', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --green: #4caf7d; --red: #e05c5c; --amber: #e8a13a; --blue: #5b8dee;
-  --push: #e07a5f; --pull: #5b8dee; --legs: #4caf7d;
-  --core: #a78bfa; --rest: #657079;
-}
+:root{--storm:#657079;--dark:#47484a;--storm-light:#8a9aa6;--storm-dim:rgba(101,112,121,0.15);--bg:#0e0f10;--surface:#1e2024;--border:rgba(101,112,121,0.2);--text:#e8eaec;--text-muted:#7a8490;--font-display:'Bebas Neue',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;--green:#4caf7d;--red:#e05c5c;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(101,112,121,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(101,112,121,0.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
-
-/* HEADER */
-header{position:relative;z-index:20;border-bottom:1px solid var(--border);background:rgba(14,15,16,0.92);backdrop-filter:blur(12px);flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:32px 24px 20px;gap:6px;transition:padding .35s ease;}
-header.compact{flex-direction:row;align-items:center;padding:10px 24px;gap:12px;}
-.logo-line{display:flex;align-items:center;gap:12px;}
-.logo-icon{border:1.5px solid var(--storm);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:36px;height:36px;transition:width .3s,height .3s;}
-header.compact .logo-icon{width:28px;height:28px;}
-.logo-icon svg{width:20px;height:20px;stroke:var(--storm-light);fill:none;stroke-width:1.8;stroke-linecap:round;transition:width .3s,height .3s;}
-header.compact .logo-icon svg{width:14px;height:14px;}
-.logo-text{font-family:var(--font-display);font-size:40px;letter-spacing:4px;color:var(--text);line-height:1;transition:font-size .3s,letter-spacing .3s;}
-header.compact .logo-text{font-size:22px;letter-spacing:2px;}
+header{position:relative;z-index:20;border-bottom:1px solid var(--border);background:rgba(14,15,16,0.92);backdrop-filter:blur(12px);flex-shrink:0;display:flex;align-items:center;padding:10px 24px;gap:12px;}
+.logo-icon{border:1.5px solid var(--storm);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;}
+.logo-icon svg{width:14px;height:14px;stroke:var(--storm-light);fill:none;stroke-width:1.8;stroke-linecap:round;}
+.logo-text{font-family:var(--font-display);font-size:22px;letter-spacing:2px;color:var(--text);line-height:1;}
 .logo-text span{color:var(--storm-light);}
 .logo-dot{display:inline-block;width:5px;height:5px;background:var(--storm);border-radius:50%;margin-left:2px;vertical-align:super;animation:pulse 2.4s ease-in-out infinite;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
-.header-meta{display:flex;flex-direction:column;align-items:center;gap:4px;}
-header.compact .header-meta{display:none;}
-.tagline{font-family:var(--font-mono);font-size:10px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase;}
-.status-bar{display:flex;align-items:center;gap:6px;}
+.compact-status{display:flex;align-items:center;gap:5px;margin-left:auto;}
 .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:statusPulse 2s ease-in-out infinite;}
 @keyframes statusPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,125,.4);}50%{box-shadow:0 0 0 4px rgba(76,175,125,0);}}
-.status-text{font-family:var(--font-mono);font-size:10px;color:var(--green);letter-spacing:1px;}
-.compact-status{display:none;align-items:center;gap:5px;margin-left:auto;}
-header.compact .compact-status{display:flex;}
-.compact-status .status-dot{width:6px;height:6px;}
 .compact-status span{font-family:var(--font-mono);font-size:9px;color:var(--green);letter-spacing:1px;}
-
-/* LAYOUT */
 .layout{flex:1;display:flex;position:relative;z-index:10;overflow:hidden;min-height:0;}
 .sidebar{width:240px;border-right:1px solid var(--border);background:rgba(20,21,23,.8);display:flex;flex-direction:column;padding:16px 14px;gap:6px;flex-shrink:0;overflow-y:auto;}
 .sidebar-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;padding:0 4px;margin-bottom:4px;}
-.sidebar-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:13px;cursor:pointer;text-align:left;transition:all .15s;}
+.sidebar-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:13px;cursor:pointer;text-align:left;transition:all .15s;text-decoration:none;width:100%;}
 .sidebar-btn:hover,.sidebar-btn.active{background:var(--storm-dim);border-color:var(--border);color:var(--text);}
 .sidebar-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;flex-shrink:0;}
 .sidebar-divider{height:1px;background:var(--border);margin:6px 0;}
@@ -63,8 +34,6 @@ header.compact .compact-status{display:flex;}
 .stat-item{text-align:center;padding:6px 4px;border-radius:6px;background:rgba(101,112,121,.1);}
 .stat-val{font-family:var(--font-display);font-size:20px;color:var(--storm-light);line-height:1;}
 .stat-key{font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
-
-/* CHAT */
 .chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 .messages{flex:1;overflow-y:scroll;padding:24px 40px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth;min-height:0;}
 .messages::-webkit-scrollbar{width:4px;}
@@ -106,8 +75,6 @@ header.compact .compact-status{display:flex;}
 .typing-dots span:nth-child(2){animation-delay:.2s;}
 .typing-dots span:nth-child(3){animation-delay:.4s;}
 @keyframes dot{0%,80%,100%{transform:scale(.7);opacity:.4;}40%{transform:scale(1);opacity:1;}}
-
-/* RIGHT PANEL */
 .right-panel{width:210px;border-left:1px solid var(--border);background:rgba(20,21,23,.8);padding:16px 14px;display:flex;flex-direction:column;gap:14px;flex-shrink:0;overflow-y:auto;}
 .panel-section-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;}
 .tip-card{padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--storm-dim);font-size:12px;color:var(--text-muted);line-height:1.6;}
@@ -116,182 +83,27 @@ header.compact .compact-status{display:flex;}
 .metric-row:last-child{border-bottom:none;}
 .metric-label{color:var(--text-muted);}
 .metric-val{font-family:var(--font-mono);font-size:11px;color:var(--storm-light);}
-
-/* ══════════════════════════════════════
-   PROGRESS PANEL
-══════════════════════════════════════ */
-.progress-panel{flex:1;display:none;flex-direction:column;overflow-y:auto;padding:0;gap:0;}
-.progress-panel.visible{display:flex;}
-
-/* Tab bar */
-.progress-tabs{display:flex;border-bottom:1px solid var(--border);background:rgba(20,21,23,.9);flex-shrink:0;}
-.ptab{padding:12px 20px;font-family:var(--font-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;transition:all .2s;}
-.ptab:hover{color:var(--text);}
-.ptab.active{color:var(--storm-light);border-bottom-color:var(--storm-light);}
-
-.ptab-content{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:20px;}
-.ptab-content.active{display:flex;}
-
-/* Section boxes */
-.p-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;}
-.p-section-title{font-family:var(--font-display);font-size:16px;letter-spacing:2px;color:var(--storm-light);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-.p-section-badge{font-size:10px;font-family:var(--font-mono);letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--storm-dim);color:var(--storm-light);}
-
-/* Day type chip */
-.day-type-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:500;margin-bottom:14px;}
-.day-type-chip.push{background:rgba(224,122,95,.12);color:var(--push);border:1px solid rgba(224,122,95,.3);}
-.day-type-chip.pull{background:rgba(91,141,238,.12);color:var(--pull);border:1px solid rgba(91,141,238,.3);}
-.day-type-chip.legs{background:rgba(76,175,125,.12);color:var(--legs);border:1px solid rgba(76,175,125,.3);}
-.day-type-chip.core{background:rgba(167,139,250,.12);color:var(--core);border:1px solid rgba(167,139,250,.3);}
-.day-type-chip.rest{background:rgba(101,112,121,.12);color:var(--rest);border:1px solid rgba(101,112,121,.3);}
-.day-type-chip::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;}
-
-/* Checklist */
-.checklist{display:flex;flex-direction:column;gap:8px;}
-.task-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(101,112,121,.06);transition:all .15s;cursor:pointer;}
-.task-item:hover:not(.locked){border-color:var(--storm);background:var(--storm-dim);}
-.task-item.done{border-color:rgba(76,175,125,.3);background:rgba(76,175,125,.06);}
-.task-item.locked{opacity:.5;cursor:not-allowed;}
-.task-checkbox{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--storm);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
-.task-item.done .task-checkbox{background:var(--green);border-color:var(--green);}
-.task-checkbox svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;display:none;}
-.task-item.done .task-checkbox svg{display:block;}
-.task-text{font-size:13px;line-height:1.4;flex:1;}
-.task-item.done .task-text{text-decoration:line-through;color:var(--text-muted);}
-.task-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:1px;padding:2px 6px;border-radius:4px;}
-.task-badge.water{background:rgba(91,141,238,.15);color:var(--pull);}
-.task-badge.diet{background:rgba(76,175,125,.15);color:var(--green);}
-.task-badge.workout{background:rgba(224,122,95,.15);color:var(--push);}
-
-/* Progress bar */
-.pbar-wrap{margin:14px 0 0;}
-.pbar-label{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:6px;}
-.pbar-track{height:6px;background:rgba(101,112,121,.2);border-radius:3px;overflow:hidden;}
-.pbar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--storm),var(--storm-light));transition:width .5s ease;}
-
-/* Weekly grid */
-.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
-.week-day-card{padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:rgba(101,112,121,.06);text-align:center;position:relative;}
-.week-day-card.today{border-color:var(--storm);background:var(--storm-dim);}
-.week-day-card.has-data{border-color:rgba(101,112,121,.3);}
-.wdc-name{font-family:var(--font-mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
-.wdc-type{font-size:10px;font-weight:500;text-transform:capitalize;margin-bottom:6px;}
-.wdc-type.push{color:var(--push);}
-.wdc-type.pull{color:var(--pull);}
-.wdc-type.legs{color:var(--legs);}
-.wdc-type.core{color:var(--core);}
-.wdc-type.rest{color:var(--rest);}
-.wdc-pct{font-family:var(--font-display);font-size:18px;color:var(--storm-light);line-height:1;}
-.wdc-pct-label{font-size:9px;color:var(--text-muted);letter-spacing:1px;}
-.wdc-mini-bar{height:3px;border-radius:2px;margin-top:6px;background:rgba(101,112,121,.2);overflow:hidden;}
-.wdc-mini-fill{height:100%;border-radius:2px;background:var(--storm-light);transition:width .5s ease;}
-
-/* Charts */
-.chart-container{position:relative;height:200px;}
-.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-
-/* AI feedback block */
-.ai-block{padding:14px;border-radius:10px;background:var(--storm-dim);border:1px solid var(--border);font-size:13px;line-height:1.7;}
-.ai-block-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--storm-light);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
-.ai-block-label::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--storm-light);animation:statusPulse 2s infinite;}
-
-/* Save form */
-.form-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.form-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:120px;}
-.form-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;}
-.form-input{background:rgba(101,112,121,.1);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font-body);font-size:14px;outline:none;transition:border-color .2s;width:100%;}
-.form-input:focus{border-color:var(--storm);}
-.save-btn{padding:10px 24px;border:none;border-radius:9px;background:var(--storm);color:#fff;font-family:var(--font-body);font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;}
-.save-btn:hover:not(:disabled){background:var(--storm-light);transform:scale(1.02);}
-.save-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
-.save-status{font-family:var(--font-mono);font-size:11px;padding:6px 12px;border-radius:6px;display:none;letter-spacing:.5px;}
-.save-status.success{display:block;color:var(--green);background:rgba(76,175,125,.1);border:1px solid rgba(76,175,125,.25);}
-.save-status.error{display:block;color:var(--red);background:rgba(224,92,92,.1);border:1px solid rgba(224,92,92,.25);}
-
-/* Empty state */
-.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;}
-.empty-state svg{width:40px;height:40px;stroke:var(--border);fill:none;stroke-width:1.5;stroke-linecap:round;margin-bottom:12px;}
-
-/* Plan parse button */
-.parse-plan-btn{padding:7px 16px;border:1px solid var(--storm);border-radius:8px;background:var(--storm-dim);color:var(--storm-light);font-family:var(--font-mono);font-size:11px;letter-spacing:1px;cursor:pointer;transition:all .15s;}
-.parse-plan-btn:hover{background:var(--storm);color:#fff;}
-
-/* Notification toast */
 .toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:var(--font-body);color:var(--text);animation:toastIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);}
 .toast.success{border-color:rgba(76,175,125,.4);color:var(--green);}
-.toast.error{border-color:rgba(224,92,92,.4);color:var(--red);}
 @keyframes toastIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-
-/* No-plan notice */
-.no-plan-notice{padding:14px;border-radius:10px;border:1px dashed var(--border);font-size:13px;color:var(--text-muted);text-align:center;line-height:1.6;}
-
-@media(max-width:700px){
-  .sidebar,.right-panel{display:none;}
-  header{flex-direction:row!important;align-items:center!important;padding:10px 16px!important;gap:10px!important;}
-  .header-meta{display:none!important;}
-  .compact-status{display:flex!important;}
-  .logo-text{font-size:22px!important;letter-spacing:2px!important;}
-  .logo-icon{width:28px!important;height:28px!important;}
-  .logo-icon svg{width:14px!important;height:14px!important;}
-  .messages{padding:16px 14px;}
-  .bubble{font-size:13px;max-width:calc(100vw - 80px);}
-  .quick-prompts{padding:0 14px 8px;}
-  .input-bar{padding:10px 14px 14px;}
-  .input-hint{display:none;}
-  .ptab-content{padding:16px 14px;}
-  .week-grid{grid-template-columns:repeat(4,1fr);}
-  .charts-row{grid-template-columns:1fr;}
-}
+@media(max-width:700px){.sidebar,.right-panel{display:none;}.messages{padding:16px 14px;}.bubble{font-size:13px;max-width:calc(100vw - 80px);}.quick-prompts{padding:0 14px 8px;}.input-bar{padding:10px 14px 14px;}.input-hint{display:none;}}
 </style>
 </head>
 <body>
-
-<header id="mainHeader">
-  <div class="logo-line">
-    <div class="logo-icon">
-      <svg viewBox="0 0 24 24"><path d="M4 12h4M16 12h4M12 4v4M12 16v4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9l-2.8 2.8"/></svg>
-    </div>
-    <div class="logo-text">FITCORE<span>.AI</span><span class="logo-dot"></span></div>
-  </div>
-  <div class="header-meta">
-    <div class="tagline">Mental &amp; Physical Fitness Intelligence</div>
-    <div class="status-bar">
-      <div class="status-dot"></div>
-      <div class="status-text">ONLINE · MODEL READY</div>
-    </div>
-  </div>
-  <div class="compact-status">
-    <div class="status-dot"></div>
-    <span>ONLINE</span>
-  </div>
+<header>
+  <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M4 12h4M16 12h4M12 4v4M12 16v4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9l-2.8 2.8"/></svg></div>
+  <div class="logo-text">FITCORE<span>.AI</span><span class="logo-dot"></span></div>
+  <div class="compact-status"><div class="status-dot"></div><span>ONLINE</span></div>
 </header>
-
 <div class="layout">
-
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-label">Navigation</div>
-    <button class="sidebar-btn active" id="btn-chat" onclick="switchView('chat',this)">
-      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      Chat
-    </button>
-    <button class="sidebar-btn" id="btn-workout" onclick="switchView('workout',this)">
-      <svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 8h4M17 8h4M3 16h4M17 16h4"/></svg>
-      Workout Planner
-    </button>
-    <button class="sidebar-btn" id="btn-diet" onclick="switchView('diet',this)">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-      Diet Advisor
-    </button>
-    <button class="sidebar-btn" id="btn-progress" onclick="switchView('progress',this)">
-      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Progress Tracker
-    </button>
+    <a class="sidebar-btn active" href="index.html"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat</a>
+    <a class="sidebar-btn" href="workout.html"><svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 8h4M17 8h4M3 16h4M17 16h4"/></svg>Workout Planner</a>
+    <a class="sidebar-btn" href="diet.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Diet Advisor</a>
+    <a class="sidebar-btn" href="progress.html"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress Tracker</a>
     <div class="sidebar-divider"></div>
-    <button class="sidebar-btn" onclick="clearChat()">
-      <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-      Clear Chat
-    </button>
+    <button class="sidebar-btn" onclick="clearChat()"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>Clear Chat</button>
     <div class="profile-card">
       <div class="profile-label">Your Stats</div>
       <div class="profile-stats">
@@ -302,9 +114,7 @@ header.compact .compact-status{display:flex;}
       </div>
     </div>
   </aside>
-
-  <!-- CHAT VIEW -->
-  <main class="chat-area" id="chatView">
+  <main class="chat-area">
     <div class="messages" id="messages"></div>
     <div class="quick-prompts" id="quickPrompts">
       <button class="qp-btn" onclick="quickSend('Create a 7-day weekly workout plan for beginners with Push, Pull, Legs, Core and Rest days')">7-day workout plan</button>
@@ -315,934 +125,73 @@ header.compact .compact-status{display:flex;}
     <div class="input-bar">
       <div class="input-wrap">
         <textarea id="userInput" rows="1" placeholder="Ask about workouts, nutrition, mental health..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
       </div>
       <div class="input-hint">Enter to send · Shift+Enter for new line</div>
     </div>
   </main>
-
-  <!-- PROGRESS PANEL -->
-  <div class="progress-panel" id="progressView">
-
-    <!-- Tab Bar -->
-    <div class="progress-tabs">
-      <button class="ptab active" onclick="switchTab('today',this)">Today's Workout</button>
-      <button class="ptab" onclick="switchTab('weekly',this)">Weekly View</button>
-      <button class="ptab" onclick="switchTab('graphs',this)">Graphs</button>
-      <button class="ptab" onclick="switchTab('weight',this)">Weight Log</button>
-    </div>
-
-    <!-- TAB: TODAY -->
-    <div class="ptab-content active" id="tab-today">
-
-      <!-- No plan notice -->
-      <div class="no-plan-notice" id="noPlanNotice">
-        No workout plan detected yet. Ask the chatbot to create a weekly plan, then come back here — tasks will be auto-extracted.
-        <br><br>
-        <button class="parse-plan-btn" onclick="switchView('chat',document.getElementById('btn-chat'));quickSend('Create a 7-day weekly workout plan for beginners with Push, Pull, Legs, Core and Rest days')">
-          Generate Plan →
-        </button>
-      </div>
-
-      <!-- Today's workout section -->
-      <div class="p-section" id="todaySection" style="display:none;">
-        <div class="p-section-title">
-          TODAY'S WORKOUT
-          <span class="p-section-badge" id="todayDate"></span>
-        </div>
-        <div id="todayDayChip"></div>
-
-        <!-- Progress bar -->
-        <div class="pbar-wrap">
-          <div class="pbar-label">
-            <span>Completion</span>
-            <span id="todayPct">0%</span>
-          </div>
-          <div class="pbar-track"><div class="pbar-fill" id="todayPbarFill" style="width:0%"></div></div>
-        </div>
-
-        <!-- Checklist -->
-        <div class="checklist" id="todayChecklist" style="margin-top:16px;"></div>
-
-        <!-- AI Feedback -->
-        <div class="ai-block" id="todayAiFeedback" style="margin-top:16px;display:none;">
-          <div class="ai-block-label">AI Feedback</div>
-          <div id="todayAiFeedbackText"></div>
-        </div>
-      </div>
-
-      <!-- Manual task add -->
-      <div class="p-section" id="addTaskSection" style="display:none;">
-        <div class="p-section-title">ADD CUSTOM TASK</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Task</label>
-            <input type="text" id="customTaskInput" class="form-input" placeholder="e.g. Drink 3L water">
-          </div>
-          <div class="form-group" style="max-width:130px;">
-            <label class="form-label">Type</label>
-            <select id="customTaskType" class="form-input">
-              <option value="workout">Workout</option>
-              <option value="water">Water</option>
-              <option value="diet">Diet</option>
-            </select>
-          </div>
-          <button class="save-btn" onclick="addCustomTask()" style="margin-top:20px;">Add</button>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- TAB: WEEKLY -->
-    <div class="ptab-content" id="tab-weekly">
-      <div class="p-section">
-        <div class="p-section-title">THIS WEEK</div>
-        <div class="week-grid" id="weekGrid">
-          <!-- populated by JS -->
-        </div>
-      </div>
-      <div class="p-section">
-        <div class="p-section-title">DAY TYPE COMPLETION</div>
-        <div id="dayTypeList" style="display:flex;flex-direction:column;gap:10px;">
-          <!-- populated by JS -->
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: GRAPHS -->
-    <div class="ptab-content" id="tab-graphs">
-      <div class="charts-row">
-        <div class="p-section">
-          <div class="p-section-title">DAILY COMPLETION</div>
-          <div class="chart-container"><canvas id="lineChart"></canvas></div>
-        </div>
-        <div class="p-section">
-          <div class="p-section-title">BY DAY TYPE</div>
-          <div class="chart-container"><canvas id="barChart"></canvas></div>
-        </div>
-      </div>
-      <div class="p-section">
-        <div class="p-section-title">WEIGHT TREND</div>
-        <div class="chart-container" style="height:180px;"><canvas id="weightChartMain"></canvas></div>
-      </div>
-      <div class="ai-block" id="graphsAiFeedback" style="display:none;">
-        <div class="ai-block-label">AI Analysis</div>
-        <div id="graphsAiFeedbackText"></div>
-      </div>
-    </div>
-
-    <!-- TAB: WEIGHT LOG -->
-    <div class="ptab-content" id="tab-weight">
-      <div class="p-section">
-        <div class="p-section-title">LOG TODAY'S WEIGHT</div>
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Weight (kg)</label>
-              <input type="number" id="weightInput" class="form-input" placeholder="e.g. 72.5" step="0.1" min="20" max="300">
-            </div>
-            <div style="flex:1;min-width:160px;display:flex;flex-direction:column;gap:5px;">
-              <label class="form-label">Workout</label>
-              <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(101,112,121,.1);border:1px solid var(--border);border-radius:8px;cursor:pointer;">
-                <input type="checkbox" id="workoutCheck" style="accent-color:var(--green);width:16px;height:16px;">
-                <span style="font-size:13px;">Completed today's workout</span>
-              </label>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <button class="save-btn" onclick="saveWeight()">Save Weight</button>
-            <div class="save-status" id="saveStatus"></div>
-          </div>
-        </div>
-      </div>
-      <div class="p-section">
-        <div class="p-section-title">HISTORY</div>
-        <div id="weightHistory" style="display:flex;flex-direction:column;gap:8px;">
-          <div style="color:var(--text-muted);font-size:13px;">No entries yet.</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- RIGHT PANEL -->
   <aside class="right-panel">
-    <div>
-      <div class="panel-section-label">Daily Tip</div>
-      <div class="tip-card" id="dailyTip"></div>
-    </div>
+    <div><div class="panel-section-label">Daily Tip</div><div class="tip-card" id="dailyTip"></div></div>
     <div>
       <div class="panel-section-label">Today's Metrics</div>
-      <div class="metric-row"><span class="metric-label">Tasks Done</span><span class="metric-val" id="metricTasks">—</span></div>
-      <div class="metric-row"><span class="metric-label">Completion</span><span class="metric-val" id="metricPct">—</span></div>
-      <div class="metric-row"><span class="metric-label">Day Type</span><span class="metric-val" id="metricDayType">—</span></div>
+      <div class="metric-row"><span class="metric-label">Messages</span><span class="metric-val" id="metricMsgs">—</span></div>
       <div class="metric-row"><span class="metric-label">Week #</span><span class="metric-val" id="metricWeek">—</span></div>
     </div>
-    <div>
-      <div class="panel-section-label">Active Mode</div>
-      <div class="tip-card" id="activeMode"><strong>General Chat</strong>Ask anything about fitness, nutrition, or mental wellness.</div>
-    </div>
+    <div><div class="panel-section-label">Active Mode</div><div class="tip-card"><strong>General Chat</strong>Ask anything about fitness, nutrition, or mental wellness.</div></div>
   </aside>
-
 </div>
-
 <script>
-/* ══════════════════════════════════════════════════════
-   CONFIG & STATE
-══════════════════════════════════════════════════════ */
-const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
-
-const msgs    = document.getElementById('messages');
-const input   = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
-const qp      = document.getElementById('quickPrompts');
-const header  = document.getElementById('mainHeader');
-
-let chatLog      = [];
-let todayTasks   = [];
-let currentDayType = 'general';
-let lineChartInst = null, barChartInst = null, weightChartInst = null;
-let headerCompact = false;
-
-const STORAGE_KEY = 'fitcore_chat_v4';
-const PLAN_KEY    = 'fitcore_plan_v1';
-
-/* ── USER ID ── */
-function getUserId() {
-  let id = localStorage.getItem('fitcore_user_id');
-  if (!id) { id = 'user_' + Math.random().toString(36).substr(2,9) + '_' + Date.now(); localStorage.setItem('fitcore_user_id', id); }
-  return id;
+const BACKEND='https://fitcore-backend-ib8k.onrender.com';
+const msgs=document.getElementById('messages'),input=document.getElementById('userInput'),sendBtn=document.getElementById('sendBtn'),qp=document.getElementById('quickPrompts');
+let chatLog=[];
+const STORAGE_KEY='fitcore_chat_v4',PLAN_KEY='fitcore_plan_v1';
+function getUserId(){let id=localStorage.getItem('fitcore_user_id');if(!id){id='user_'+Math.random().toString(36).substr(2,9)+'_'+Date.now();localStorage.setItem('fitcore_user_id',id);}return id;}
+const USER_ID=getUserId();
+const tips=[{title:'Recovery',text:'Rest days are not wasted days. Muscles grow during recovery, not during the workout.'},{title:'Hydration',text:'Drink 2–3L of water daily. Dehydration cuts performance by up to 20%.'},{title:'Sleep',text:'7–9 hours of sleep regulates cortisol, hunger hormones, and recovery.'},{title:'Consistency',text:'A mediocre plan done consistently beats a perfect plan done occasionally.'},{title:'Breathing',text:'Box breathing (4-4-4-4) for 5 minutes reduces cortisol and anxiety fast.'}];
+const tip=tips[new Date().getDay()%tips.length];
+document.getElementById('dailyTip').innerHTML=`<strong>${tip.title}</strong>${tip.text}`;
+function getWeekNumber(d=new Date()){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));date.setUTCDate(date.getUTCDate()+4-(date.getUTCDay()||7));const yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil((((date-yearStart)/86400000)+1)/7);}
+function updateStats(){const u=chatLog.filter(m=>m.role==='user').length;document.getElementById('statMsgs').textContent=u;document.getElementById('metricMsgs').textContent=u||'—';const first=localStorage.getItem('fitcore_first_day');if(first)document.getElementById('statDays').textContent=Math.floor((Date.now()-parseInt(first))/86400000)+1;document.getElementById('metricWeek').textContent='W'+getWeekNumber();try{document.getElementById('statLogs').textContent=localStorage.getItem('fitcore_log_count')||0;}catch(e){}}
+function saveChatLog(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(chatLog.slice(-100)));}catch(e){}}
+function loadChatLog(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return false;const saved=JSON.parse(raw);if(!Array.isArray(saved)||!saved.length)return false;chatLog=saved;saved.forEach(m=>renderMsg(m.content,m.role==='assistant'?'bot':'user',m.time,false));return true;}catch(e){return false;}}
+const DAY_TYPE_KEYWORDS={push:['push','chest','shoulder','tricep','bench','press','overhead'],pull:['pull','back','bicep','row','deadlift','lat','chin'],legs:['leg','squat','lunge','glute','hamstring','quad','calf','lower body'],core:['core','abs','plank','crunch','oblique','abdominal'],rest:['rest','recovery','active recovery','off','off day','stretch','yoga','walk']};
+function detectDayType(text){const low=text.toLowerCase();for(const[type,kws]of Object.entries(DAY_TYPE_KEYWORDS)){if(kws.some(k=>low.includes(k)))return type;}return'general';}
+function getTodayDayTypeFromPlan(planText){const lines=planText.split('\n');const todayDow=new Date().toLocaleDateString('en',{weekday:'long'}).toLowerCase();const dowAbbrs={monday:'mon',tuesday:'tue',wednesday:'wed',thursday:'thu',friday:'fri',saturday:'sat',sunday:'sun'};const todayAbbr=dowAbbrs[todayDow]||todayDow.slice(0,3);for(const line of lines){const low=line.toLowerCase();if(low.includes(todayDow)||low.includes(todayAbbr)){return detectDayType(line);}}return null;}
+function extractTasksFromBotMessage(text,dayType){const tasks=[];const lines=text.split('\n');for(const line of lines){const clean=line.replace(/^[\s\-\*•\d\.]+/,'').trim();if(clean.length<8||clean.length>120)continue;if(/^(day|week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(clean))continue;let badge='workout';if(/water|drink|hydrat|litre|liter/i.test(clean))badge='water';else if(/eat|meal|diet|protein|calori|vegetable|fruit|nutrition|breakfast|lunch|dinner/i.test(clean))badge='diet';tasks.push({task_text:clean,day_type:dayType,badge});}const seen=new Set();return tasks.filter(t=>{if(seen.has(t.task_text))return false;seen.add(t.task_text);return true;});}
+function parsePlanAndSaveTasks(botText){localStorage.setItem(PLAN_KEY,botText);const detectedType=getTodayDayTypeFromPlan(botText)||detectDayType(botText);const tasks=extractTasksFromBotMessage(botText,detectedType);if(tasks.length===0)return;saveTasks(tasks);}
+async function saveTasks(tasks){try{const res=await fetch(`${BACKEND}/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:USER_ID,tasks})});if(!res.ok)throw new Error();showToast('Tasks saved for today ✓','success');}catch(e){}}
+function parseMarkdown(text){return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>').replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/_(.+?)_/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/^---$/gm,'<hr>').replace(/^\s*[-*•] (.+)$/gm,'<li>$1</li>').replace(/^\s*\d+\. (.+)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>\n?)+/g,m=>`<ul>${m}</ul>`).replace(/\n(?!<)/g,'<br>');}
+function renderMsg(text,role,time,animate){const row=document.createElement('div');row.className='msg-row '+role;if(!animate)row.style.animation='none';const av=document.createElement('div');av.className='avatar '+role;av.textContent=role==='bot'?'FC':'👤';const col=document.createElement('div');col.className='msg-col';const bub=document.createElement('div');bub.className='bubble '+role;bub.innerHTML=role==='bot'?parseMarkdown(text):text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');const ts=document.createElement('div');ts.className='msg-time';ts.textContent=time||new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});col.appendChild(bub);col.appendChild(ts);row.appendChild(av);row.appendChild(col);msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;return bub;}
+function addMsg(text,role){return renderMsg(text,role,null,true);}
+function addTyping(){const row=document.createElement('div');row.className='msg-row';row.id='typingRow';const av=document.createElement('div');av.className='avatar bot';av.textContent='FC';const col=document.createElement('div');col.className='msg-col';const bub=document.createElement('div');bub.className='bubble bot';bub.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div>';col.appendChild(bub);row.appendChild(av);row.appendChild(col);msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;}
+function removeTyping(){const t=document.getElementById('typingRow');if(t)t.remove();}
+function clearChat(){if(!confirm('Clear all chat history?'))return;msgs.innerHTML='';chatLog=[];saveChatLog();updateStats();addMsg("Chat cleared. What would you like to work on today?",'bot');}
+function quickSend(text){input.value=text;qp.style.display='none';sendMessage();}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+const PLAN_TRIGGERS=['workout plan','week plan','weekly plan','day plan','7-day','push day','pull day','leg day','core day','rest day'];
+async function sendMessage(){
+  const text=input.value.trim();if(!text)return;
+  input.value='';input.style.height='auto';sendBtn.disabled=true;qp.style.display='none';
+  const userTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  addMsg(text,'user');chatLog.push({role:'user',content:text,time:userTime});saveChatLog();updateStats();addTyping();
+  try{
+    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,user_id:USER_ID,history:chatLog.slice(-20).map(m=>({role:m.role,content:m.content}))})});
+    if(!res.ok)throw new Error();const data=await res.json();removeTyping();
+    const botTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    addMsg(data.reply,'bot');chatLog.push({role:'assistant',content:data.reply,time:botTime});saveChatLog();updateStats();
+    const textLow=text.toLowerCase(),replyLow=data.reply.toLowerCase();
+    if(PLAN_TRIGGERS.some(t=>textLow.includes(t)||replyLow.includes(t)))parsePlanAndSaveTasks(data.reply);
+  }catch(err){removeTyping();addMsg('Cannot reach the server right now. Wait 30 seconds and try again — the server may be waking up.','bot');}
+  sendBtn.disabled=false;input.focus();
 }
-const USER_ID = getUserId();
-
-/* ══════════════════════════════════════════════════════
-   TIPS
-══════════════════════════════════════════════════════ */
-const tips = [
-  {title:'Recovery',    text:'Rest days are not wasted days. Muscles grow during recovery, not during the workout.'},
-  {title:'Hydration',   text:'Drink 2–3L of water daily. Dehydration cuts performance by up to 20%.'},
-  {title:'Sleep',       text:'7–9 hours of sleep regulates cortisol, hunger hormones, and recovery.'},
-  {title:'Consistency', text:'A mediocre plan done consistently beats a perfect plan done occasionally.'},
-  {title:'Breathing',   text:'Box breathing (4-4-4-4) for 5 minutes reduces cortisol and anxiety fast.'},
-];
-const tip = tips[new Date().getDay() % tips.length];
-document.getElementById('dailyTip').innerHTML = `<strong>${tip.title}</strong>${tip.text}`;
-
-/* ══════════════════════════════════════════════════════
-   DATES & WEEKS
-══════════════════════════════════════════════════════ */
-function todayStr() { return new Date().toISOString().split('T')[0]; }
-
-function getWeekNumber(d = new Date()) {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-}
-
-function formatDateShort(str) {
-  const [y,m,d] = str.split('-');
-  const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${d} ${mn[parseInt(m)-1]}`;
-}
-
-function getDaysOfCurrentWeek() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const day = today.getDay(); // 0=Sun
-  const monday = new Date(today); monday.setDate(today.getDate() - ((day + 6) % 7));
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday); d.setDate(monday.getDate() + i);
-    days.push(d.toISOString().split('T')[0]);
-  }
-  return days;
-}
-
-const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
-/* ══════════════════════════════════════════════════════
-   VIEW / TAB SWITCHING
-══════════════════════════════════════════════════════ */
-const modes = {
-  chat:     {label:'General Chat',       desc:'Ask anything about fitness, nutrition, or mental wellness.'},
-  workout:  {label:'Workout Planner',    desc:'Building personalised training programs.'},
-  diet:     {label:'Diet Advisor',       desc:'Nutrition guidance and meal planning.'},
-  progress: {label:'Progress Tracker',   desc:'Track tasks, weight, and graphs.'},
-};
-
-function switchView(mode, el) {
-  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
-  if (el) el.classList.add('active');
-  document.getElementById('activeMode').innerHTML =
-    `<strong>${modes[mode]?.label || mode}</strong>${modes[mode]?.desc || ''}`;
-
-  const chatView     = document.getElementById('chatView');
-  const progressView = document.getElementById('progressView');
-
-  if (mode === 'progress') {
-    chatView.style.display     = 'none';
-    progressView.classList.add('visible');
-    loadProgressAll();
-  } else {
-    chatView.style.display     = 'flex';
-    progressView.classList.remove('visible');
-  }
-}
-
-function switchTab(tab, el) {
-  document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.ptab-content').forEach(c => c.classList.remove('active'));
-  if (el) el.classList.add('active');
-  document.getElementById('tab-' + tab).classList.add('active');
-}
-
-/* ══════════════════════════════════════════════════════
-   STATS
-══════════════════════════════════════════════════════ */
-function updateStats(tasksDone = null) {
-  document.getElementById('statMsgs').textContent = chatLog.filter(m => m.role === 'user').length;
-  const first = localStorage.getItem('fitcore_first_day');
-  if (first) document.getElementById('statDays').textContent = Math.floor((Date.now() - parseInt(first)) / 86400000) + 1;
-  if (tasksDone !== null) document.getElementById('statTasks').textContent = tasksDone;
-  document.getElementById('metricWeek').textContent = 'W' + getWeekNumber();
-}
-
-/* ══════════════════════════════════════════════════════
-   CHAT LOG
-══════════════════════════════════════════════════════ */
-function saveChatLog() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chatLog.slice(-100))); } catch(e) {} }
-
-function loadChatLog() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const saved = JSON.parse(raw);
-    if (!Array.isArray(saved) || !saved.length) return false;
-    chatLog = saved;
-    saved.forEach(m => renderMsg(m.content, m.role === 'assistant' ? 'bot' : 'user', m.time, false));
-    return true;
-  } catch(e) { return false; }
-}
-
-/* ══════════════════════════════════════════════════════
-   PLAN PARSING
-══════════════════════════════════════════════════════ */
-const DAY_TYPE_KEYWORDS = {
-  push: ['push','chest','shoulder','tricep','bench','press','overhead'],
-  pull: ['pull','back','bicep','row','deadlift','lat','chin'],
-  legs: ['leg','squat','lunge','glute','hamstring','quad','calf','lower body'],
-  core: ['core','abs','plank','crunch','oblique','abdominal'],
-  rest: ['rest','recovery','active recovery','off','off day','stretch','yoga','walk'],
-};
-
-function detectDayType(text) {
-  const low = text.toLowerCase();
-  for (const [type, kws] of Object.entries(DAY_TYPE_KEYWORDS)) {
-    if (kws.some(k => low.includes(k))) return type;
-  }
-  return 'general';
-}
-
-function getTodayDayTypeFromPlan(planText) {
-  const lines = planText.split('\n');
-  const todayDow = new Date().toLocaleDateString('en', {weekday:'long'}).toLowerCase();
-  const dowAbbrs = {monday:'mon',tuesday:'tue',wednesday:'wed',thursday:'thu',friday:'fri',saturday:'sat',sunday:'sun'};
-  const todayAbbr = dowAbbrs[todayDow] || todayDow.slice(0,3);
-
-  for (const line of lines) {
-    const low = line.toLowerCase();
-    if (low.includes(todayDow) || low.includes(todayAbbr)) {
-      return detectDayType(line);
-    }
-  }
-  return null;
-}
-
-function extractTasksFromBotMessage(text, dayType) {
-  const tasks = [];
-  const lines = text.split('\n');
-
-  for (const line of lines) {
-    const clean = line.replace(/^[\s\-\*•\d\.]+/, '').trim();
-    if (clean.length < 8 || clean.length > 120) continue;
-    if (/^(day|week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(clean)) continue;
-
-    // detect badge
-    let badge = 'workout';
-    if (/water|drink|hydrat|litre|liter/i.test(clean)) badge = 'water';
-    else if (/eat|meal|diet|protein|calori|vegetable|fruit|nutrition|breakfast|lunch|dinner/i.test(clean)) badge = 'diet';
-
-    tasks.push({ task_text: clean, day_type: dayType, badge });
-  }
-
-  // deduplicate
-  const seen = new Set();
-  return tasks.filter(t => { if (seen.has(t.task_text)) return false; seen.add(t.task_text); return true; });
-}
-
-function parsePlanAndSaveTasks(botText) {
-  // Store raw plan
-  localStorage.setItem(PLAN_KEY, botText);
-
-  const detectedType = getTodayDayTypeFromPlan(botText) || detectDayType(botText);
-  const tasks = extractTasksFromBotMessage(botText, detectedType);
-
-  if (tasks.length === 0) return;
-
-  currentDayType = detectedType;
-  saveTasks(tasks);
-}
-
-async function saveTasks(tasks) {
-  try {
-    const res = await fetch(`${BACKEND}/tasks`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ user_id: USER_ID, tasks })
-    });
-    if (!res.ok) throw new Error();
-    showToast('Tasks saved for today ✓', 'success');
-    if (document.getElementById('progressView').classList.contains('visible')) {
-      loadProgressAll();
-    }
-  } catch(e) {
-    // silently fail
-  }
-}
-
-/* ══════════════════════════════════════════════════════
-   CHAT UI
-══════════════════════════════════════════════════════ */
-function parseMarkdown(text) {
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
-    .replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/_(.+?)_/g,'<em>$1</em>')
-    .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/^---$/gm,'<hr>')
-    .replace(/^\s*[-*•] (.+)$/gm,'<li>$1</li>')
-    .replace(/^\s*\d+\. (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-    .replace(/\n(?!<)/g,'<br>');
-}
-
-function renderMsg(text, role, time, animate) {
-  const row = document.createElement('div');
-  row.className = 'msg-row ' + role;
-  if (!animate) row.style.animation = 'none';
-  const av = document.createElement('div'); av.className = 'avatar ' + role; av.textContent = role === 'bot' ? 'FC' : '👤';
-  const col = document.createElement('div'); col.className = 'msg-col';
-  const bub = document.createElement('div'); bub.className = 'bubble ' + role;
-  bub.innerHTML = role === 'bot' ? parseMarkdown(text) : text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-  const ts = document.createElement('div'); ts.className = 'msg-time';
-  ts.textContent = time || new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  col.appendChild(bub); col.appendChild(ts);
-  row.appendChild(av); row.appendChild(col);
-  msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
-  return bub;
-}
-
-function addMsg(text, role) { return renderMsg(text, role, null, true); }
-
-function addTyping() {
-  const row = document.createElement('div'); row.className = 'msg-row'; row.id = 'typingRow';
-  const av = document.createElement('div'); av.className = 'avatar bot'; av.textContent = 'FC';
-  const col = document.createElement('div'); col.className = 'msg-col';
-  const bub = document.createElement('div'); bub.className = 'bubble bot';
-  bub.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-  col.appendChild(bub); row.appendChild(av); row.appendChild(col);
-  msgs.appendChild(row); msgs.scrollTop = msgs.scrollHeight;
-}
-
-function removeTyping() { const t = document.getElementById('typingRow'); if (t) t.remove(); }
-
-function clearChat() {
-  if (!confirm('Clear all chat history?')) return;
-  msgs.innerHTML = ''; chatLog = []; saveChatLog();
-  qp.style.display = 'flex'; headerCompact = false; header.classList.remove('compact');
-  updateStats();
-  addMsg("Chat cleared. What would you like to work on today?", 'bot');
-}
-
-function quickSend(text) { input.value = text; qp.style.display = 'none'; sendMessage(); }
-
-function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
-function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-
-function collapseHeader() { if (!headerCompact) { headerCompact = true; header.classList.add('compact'); } }
-
-const PLAN_TRIGGERS = ['workout plan','week plan','weekly plan','day plan','7-day','push day','pull day','leg day','core day','rest day'];
-
-async function sendMessage() {
-  const text = input.value.trim();
-  if (!text) return;
-
-  input.value = ''; input.style.height = 'auto';
-  sendBtn.disabled = true; qp.style.display = 'none'; collapseHeader();
-
-  const userTime = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  addMsg(text, 'user');
-  chatLog.push({role:'user', content:text, time:userTime});
-  saveChatLog(); updateStats(); addTyping();
-
-  try {
-    const res = await fetch(`${BACKEND}/chat`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ message: text, user_id: USER_ID, history: chatLog.slice(-20).map(m => ({role:m.role, content:m.content})) })
-    });
-    if (!res.ok) throw new Error('Server error ' + res.status);
-    const data = await res.json();
-    removeTyping();
-
-    const botTime = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    addMsg(data.reply, 'bot');
-    chatLog.push({role:'assistant', content:data.reply, time:botTime});
-    saveChatLog(); updateStats();
-
-    // Auto-parse if looks like a workout plan
-    const textLow = text.toLowerCase();
-    const replyLow = data.reply.toLowerCase();
-    const isPlan = PLAN_TRIGGERS.some(t => textLow.includes(t) || replyLow.includes(t));
-    if (isPlan) {
-      parsePlanAndSaveTasks(data.reply);
-    }
-
-  } catch(err) {
-    removeTyping();
-    addMsg('Cannot reach the server right now. Wait 30 seconds and try again — the server may be waking up.', 'bot');
-  }
-
-  sendBtn.disabled = false; input.focus();
-}
-
-/* ══════════════════════════════════════════════════════
-   PROGRESS — LOAD ALL
-══════════════════════════════════════════════════════ */
-async function loadProgressAll() {
-  await Promise.all([loadTodayTasks(), loadTasksHistory(), loadWeightData()]);
-}
-
-/* ══════════════════════════════════════════════════════
-   TODAY'S TASKS
-══════════════════════════════════════════════════════ */
-async function loadTodayTasks() {
-  document.getElementById('todayDate').textContent = formatDateShort(todayStr());
-
-  try {
-    const res = await fetch(`${BACKEND}/tasks?user_id=${USER_ID}&date=${todayStr()}`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    todayTasks = data.tasks || [];
-  } catch(e) {
-    todayTasks = [];
-  }
-
-  renderTodayChecklist();
-  updateRightPanelMetrics();
-}
-
-function renderTodayChecklist() {
-  const todaySection  = document.getElementById('todaySection');
-  const noPlanNotice  = document.getElementById('noPlanNotice');
-  const addTaskSection = document.getElementById('addTaskSection');
-  const checklist     = document.getElementById('todayChecklist');
-  const chipEl        = document.getElementById('todayDayChip');
-
-  // Check stored plan
-  const storedPlan = localStorage.getItem(PLAN_KEY);
-
-  if (!todayTasks.length && !storedPlan) {
-    noPlanNotice.style.display  = 'block';
-    todaySection.style.display  = 'none';
-    addTaskSection.style.display = 'none';
-    return;
-  }
-
-  noPlanNotice.style.display   = 'none';
-  todaySection.style.display   = 'block';
-  addTaskSection.style.display = 'block';
-
-  const dayType = todayTasks.length ? todayTasks[0].day_type : (storedPlan ? getTodayDayTypeFromPlan(storedPlan) || 'general' : 'general');
-  currentDayType = dayType;
-
-  chipEl.innerHTML = `<div class="day-type-chip ${dayType}">${dayType.toUpperCase()} DAY</div>`;
-  document.getElementById('metricDayType').textContent = dayType.toUpperCase();
-
-  checklist.innerHTML = '';
-
-  if (!todayTasks.length) {
-    checklist.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">No tasks yet. Add custom tasks or send a workout plan in chat.</div>';
-    updateTodayProgress(0, 0);
-    return;
-  }
-
-  todayTasks.forEach(task => {
-    const item = document.createElement('div');
-    item.className = 'task-item' + (task.completed ? ' done' : '');
-    item.dataset.id = task.id;
-
-    item.innerHTML = `
-      <div class="task-checkbox">
-        <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
-      </div>
-      <span class="task-text">${escHtml(task.task_text)}</span>
-      <span class="task-badge ${task.day_type === 'water' ? 'water' : task.day_type === 'diet' ? 'diet' : 'workout'}">${task.day_type}</span>
-    `;
-
-    item.addEventListener('click', () => toggleTask(task.id, !task.completed, item));
-    checklist.appendChild(item);
-  });
-
-  const done  = todayTasks.filter(t => t.completed).length;
-  const total = todayTasks.length;
-  updateTodayProgress(done, total);
-
-  document.getElementById('metricTasks').textContent = `${done}/${total}`;
-}
-
-function updateTodayProgress(done, total) {
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  document.getElementById('todayPct').textContent = pct + '%';
-  document.getElementById('todayPbarFill').style.width = pct + '%';
-  document.getElementById('metricPct').textContent = pct + '%';
-  updateStats(done);
-
-  if (total > 0 && done === total) {
-    // All done — fetch AI feedback
-    fetchTodayAiFeedback();
-  }
-}
-
-async function toggleTask(taskId, newState, itemEl) {
-  // Optimistic UI
-  itemEl.classList.toggle('done', newState);
-  const idx = todayTasks.findIndex(t => t.id === taskId);
-  if (idx !== -1) todayTasks[idx].completed = newState ? 1 : 0;
-  const done  = todayTasks.filter(t => t.completed).length;
-  updateTodayProgress(done, todayTasks.length);
-
-  try {
-    await fetch(`${BACKEND}/tasks/update`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ user_id: USER_ID, task_id: taskId, completed: newState })
-    });
-  } catch(e) {
-    // revert
-    itemEl.classList.toggle('done', !newState);
-    if (idx !== -1) todayTasks[idx].completed = newState ? 0 : 1;
-    showToast('Failed to update task', 'error');
-  }
-}
-
-async function addCustomTask() {
-  const txt  = document.getElementById('customTaskInput').value.trim();
-  const type = document.getElementById('customTaskType').value;
-  if (!txt) return;
-
-  const task = { task_text: txt, day_type: type };
-  await saveTasks([...todayTasks.map(t => ({task_text:t.task_text, day_type:t.day_type})), task]);
-  document.getElementById('customTaskInput').value = '';
-  await loadTodayTasks();
-}
-
-async function fetchTodayAiFeedback() {
-  const fb    = document.getElementById('todayAiFeedback');
-  const fbTxt = document.getElementById('todayAiFeedbackText');
-  fb.style.display = 'block';
-  fbTxt.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-
-  const done   = todayTasks.filter(t => t.completed).map(t => t.task_text);
-  const missed = todayTasks.filter(t => !t.completed).map(t => t.task_text);
-  const pct    = todayTasks.length ? Math.round((done.length / todayTasks.length) * 100) : 0;
-
-  try {
-    const res = await fetch(`${BACKEND}/tasks/ai-feedback`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ user_id: USER_ID, completion_pct: pct, day_type: currentDayType, tasks_done: done, tasks_missed: missed })
-    });
-    const data = await res.json();
-    fbTxt.innerHTML = parseMarkdown(data.feedback);
-  } catch(e) {
-    fbTxt.innerHTML = '<span style="color:var(--text-muted)">Could not get AI feedback right now.</span>';
-  }
-}
-
-/* ══════════════════════════════════════════════════════
-   TASKS HISTORY + WEEKLY + GRAPHS
-══════════════════════════════════════════════════════ */
-async function loadTasksHistory() {
-  try {
-    const res = await fetch(`${BACKEND}/tasks/history?user_id=${USER_ID}`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    renderWeekGrid(data.weekly_days || []);
-    renderDayTypeList(data.by_day_type || []);
-    renderLineChart(data.by_date || []);
-    renderBarChart(data.by_day_type || []);
-  } catch(e) {}
-}
-
-function renderWeekGrid(weeklyDays) {
-  const grid     = document.getElementById('weekGrid');
-  const weekDays = getDaysOfCurrentWeek();
-  const planData = {}; // date -> {day_type, pct}
-
-  weeklyDays.forEach(r => {
-    planData[r.date] = {
-      day_type: r.day_type,
-      pct: r.total > 0 ? Math.round((r.done / r.total) * 100) : 0,
-      total: r.total, done: r.done
-    };
-  });
-
-  // Also check stored plan for day types
-  const storedPlan = localStorage.getItem(PLAN_KEY);
-  const planLines  = storedPlan ? storedPlan.split('\n') : [];
-
-  grid.innerHTML = '';
-  const today = todayStr();
-
-  weekDays.forEach((dateStr, i) => {
-    const d     = planData[dateStr];
-    const isToday = dateStr === today;
-    const isPast  = dateStr < today;
-
-    // Guess day type from plan text if not in DB
-    let guessType = 'rest';
-    if (d) {
-      guessType = d.day_type;
-    } else if (storedPlan) {
-      const dayMatch = planLines.find(l => l.toLowerCase().includes(DAY_NAMES[i].toLowerCase()));
-      if (dayMatch) guessType = detectDayType(dayMatch);
-    }
-
-    const card = document.createElement('div');
-    card.className = 'week-day-card' + (isToday ? ' today' : '') + (d ? ' has-data' : '');
-    const pct = d ? d.pct : (isPast ? 0 : null);
-
-    card.innerHTML = `
-      <div class="wdc-name">${DAY_NAMES[i]}</div>
-      <div class="wdc-type ${guessType}">${guessType}</div>
-      <div class="wdc-pct">${pct !== null ? pct + '%' : '—'}</div>
-      <div class="wdc-pct-label">${d ? `${d.done||0}/${d.total||0}` : (isToday ? 'today' : '')}</div>
-      <div class="wdc-mini-bar"><div class="wdc-mini-fill" style="width:${pct || 0}%"></div></div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-function renderDayTypeList(byDayType) {
-  const el = document.getElementById('dayTypeList');
-  if (!byDayType.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No data yet.</div>'; return; }
-  el.innerHTML = '';
-  const colorMap = {push:'var(--push)',pull:'var(--pull)',legs:'var(--legs)',core:'var(--core)',rest:'var(--rest)',general:'var(--storm-light)'};
-  byDayType.forEach(r => {
-    const color = colorMap[r.day_type] || 'var(--storm-light)';
-    const div = document.createElement('div');
-    div.innerHTML = `
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-        <span style="font-size:12px;text-transform:capitalize;color:${color};">${r.day_type}</span>
-        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${r.pct}% · ${r.total_tasks} tasks</span>
-      </div>
-      <div class="pbar-track"><div class="pbar-fill" style="width:${r.pct}%;background:${color};"></div></div>
-    `;
-    el.appendChild(div);
-  });
-}
-
-/* ══════════════════════════════════════════════════════
-   CHARTS
-══════════════════════════════════════════════════════ */
-const chartDefaults = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: {
-    backgroundColor:'#1e2024', borderColor:'rgba(101,112,121,.3)', borderWidth:1,
-    titleColor:'#8a9aa6', bodyColor:'#e8eaec',
-    titleFont:{family:'JetBrains Mono',size:10}, bodyFont:{family:'DM Sans',size:12}, padding:10
-  }},
-  scales: {
-    x: { ticks:{color:'#7a8490',font:{family:'JetBrains Mono',size:9}}, grid:{color:'rgba(101,112,121,.1)'} },
-    y: { ticks:{color:'#7a8490',font:{family:'JetBrains Mono',size:9}}, grid:{color:'rgba(101,112,121,.1)'}, min:0, max:100 }
-  }
-};
-
-function renderLineChart(byDate) {
-  const labels  = byDate.map(r => formatDateShort(r.date));
-  const values  = byDate.map(r => r.pct);
-  const ctx = document.getElementById('lineChart').getContext('2d');
-
-  if (lineChartInst) { lineChartInst.data.labels = labels; lineChartInst.data.datasets[0].data = values; lineChartInst.update(); return; }
-
-  lineChartInst = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: [{
-      label: 'Completion %', data: values,
-      borderColor:'#8a9aa6', backgroundColor:'rgba(101,112,121,.12)',
-      pointBackgroundColor:'#657079', pointBorderColor:'#8a9aa6',
-      pointRadius:4, pointHoverRadius:6, borderWidth:2, fill:true, tension:.35,
-    }]},
-    options: chartDefaults,
-  });
-}
-
-function renderBarChart(byDayType) {
-  const colorMap = {push:'rgba(224,122,95,.8)',pull:'rgba(91,141,238,.8)',legs:'rgba(76,175,125,.8)',core:'rgba(167,139,250,.8)',rest:'rgba(101,112,121,.8)',general:'rgba(138,154,166,.8)'};
-  const labels = byDayType.map(r => r.day_type.toUpperCase());
-  const values = byDayType.map(r => r.pct);
-  const colors = byDayType.map(r => colorMap[r.day_type] || 'rgba(138,154,166,.8)');
-  const ctx = document.getElementById('barChart').getContext('2d');
-
-  if (barChartInst) { barChartInst.data.labels = labels; barChartInst.data.datasets[0].data = values; barChartInst.data.datasets[0].backgroundColor = colors; barChartInst.update(); return; }
-
-  barChartInst = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets: [{ label:'Avg Completion %', data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false }]},
-    options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: {...chartDefaults.scales.y, min:0, max:100} } },
-  });
-}
-
-/* ══════════════════════════════════════════════════════
-   WEIGHT LOG
-══════════════════════════════════════════════════════ */
-async function loadWeightData() {
-  try {
-    const res = await fetch(`${BACKEND}/progress?user_id=${USER_ID}`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    const records = data.progress || [];
-    renderWeightHistory(records);
-    renderWeightChartMain(records);
-    document.getElementById('statLogs').textContent = records.length;
-    prefillWeightToday(records);
-  } catch(e) {}
-}
-
-function prefillWeightToday(records) {
-  const today = records.find(r => r.date === todayStr());
-  if (today) {
-    document.getElementById('weightInput').value    = today.weight || '';
-    document.getElementById('workoutCheck').checked = !!today.workout_done;
-  }
-}
-
-function renderWeightHistory(records) {
-  const el = document.getElementById('weightHistory');
-  if (!records.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No entries yet.</div>'; return; }
-  el.innerHTML = '';
-  const today = todayStr();
-  [...records].reverse().forEach(r => {
-    const isToday = r.date === today;
-    const div = document.createElement('div');
-    div.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:9px;background:rgba(101,112,121,.06);border:1px solid ${isToday ? 'var(--storm)' : 'var(--border)'};font-size:13px;`;
-    div.innerHTML = `
-      <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${formatDateShort(r.date)}${isToday ? ' <span style="color:var(--storm-light);font-size:9px;margin-left:4px;">TODAY</span>' : ''}</span>
-      <span style="font-family:var(--font-display);font-size:18px;color:var(--storm-light);">${r.weight != null ? r.weight + ' kg' : '—'}</span>
-      <span>${r.workout_done ? '✅' : '❌'}</span>
-    `;
-    el.appendChild(div);
-  });
-}
-
-function renderWeightChartMain(records) {
-  const filtered = records.filter(r => r.weight != null);
-  const labels   = filtered.map(r => formatDateShort(r.date));
-  const weights  = filtered.map(r => r.weight);
-  const ctx = document.getElementById('weightChartMain').getContext('2d');
-
-  if (weightChartInst) { weightChartInst.data.labels = labels; weightChartInst.data.datasets[0].data = weights; weightChartInst.update(); return; }
-
-  const wOpts = JSON.parse(JSON.stringify(chartDefaults));
-  wOpts.scales.y = { ticks:{color:'#7a8490',font:{family:'JetBrains Mono',size:9}}, grid:{color:'rgba(101,112,121,.1)'} };
-
-  weightChartInst = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: [{
-      label:'Weight (kg)', data: weights,
-      borderColor:'#8a9aa6', backgroundColor:'rgba(101,112,121,.12)',
-      pointBackgroundColor:'#657079', pointBorderColor:'#8a9aa6',
-      pointRadius:4, pointHoverRadius:6, borderWidth:2, fill:true, tension:.35,
-    }]},
-    options: wOpts,
-  });
-}
-
-async function saveWeight() {
-  const weight      = parseFloat(document.getElementById('weightInput').value);
-  const workoutDone = document.getElementById('workoutCheck').checked;
-  const statusEl    = document.getElementById('saveStatus');
-
-  if (isNaN(weight) || weight <= 0) { showSaveStatus('Enter a valid weight.','error'); return; }
-
-  try {
-    const res = await fetch(`${BACKEND}/progress`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ user_id:USER_ID, weight, workout_done:workoutDone })
-    });
-    if (!res.ok) throw new Error();
-    showSaveStatus('Saved ✓','success');
-    await loadWeightData();
-  } catch(e) {
-    showSaveStatus('Save failed.','error');
-  }
-}
-
-function showSaveStatus(msg, type) {
-  const el = document.getElementById('saveStatus');
-  el.textContent = msg; el.className = 'save-status ' + type;
-  if (type === 'success') setTimeout(() => { el.className = 'save-status'; }, 3000);
-}
-
-/* ══════════════════════════════════════════════════════
-   RIGHT PANEL METRICS
-══════════════════════════════════════════════════════ */
-function updateRightPanelMetrics() {
-  const done  = todayTasks.filter(t => t.completed).length;
-  const total = todayTasks.length;
-  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
-  document.getElementById('metricTasks').textContent  = total > 0 ? `${done}/${total}` : '—';
-  document.getElementById('metricPct').textContent    = total > 0 ? pct + '%' : '—';
-  document.getElementById('metricDayType').textContent = currentDayType.toUpperCase();
-}
-
-/* ══════════════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════════════ */
-let toastTimer = null;
-function showToast(msg, type = '') {
-  const existing = document.querySelector('.toast');
-  if (existing) existing.remove();
-  const t = document.createElement('div');
-  t.className = 'toast ' + type; t.textContent = msg;
-  document.body.appendChild(t);
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.remove(), 3000);
-}
-
-/* ══════════════════════════════════════════════════════
-   HELPERS
-══════════════════════════════════════════════════════ */
-function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-/* ══════════════════════════════════════════════════════
-   INIT
-══════════════════════════════════════════════════════ */
-(function init() {
-  if (!localStorage.getItem('fitcore_first_day')) localStorage.setItem('fitcore_first_day', Date.now().toString());
-  const hadHistory = loadChatLog();
-  if (hadHistory) { collapseHeader(); qp.style.display = 'none'; }
-  else addMsg("Hey! I'm **FITCORE.AI** — your personal fitness and mental wellness companion.\n\nTell me your goal and I'll build a plan around you. Whether it's weight loss, muscle gain, stress relief, or better sleep — I've got you covered.\n\nTry: *\"Create a 7-day weekly workout plan with Push, Pull, Legs, Core and Rest days\"* — tasks will be automatically saved to your tracker!", 'bot');
-  updateStats();
-  msgs.scrollTop = msgs.scrollHeight;
-  document.getElementById('metricWeek').textContent = 'W' + getWeekNumber();
+let toastTimer=null;
+function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)ex.remove();const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3000);}
+(function init(){
+  if(!localStorage.getItem('fitcore_first_day'))localStorage.setItem('fitcore_first_day',Date.now().toString());
+  const hadHistory=loadChatLog();
+  if(!hadHistory)addMsg("Hey! I'm **FITCORE.AI** — your personal fitness and mental wellness companion.\n\nTell me your goal and I'll build a plan around you. Whether it's weight loss, muscle gain, stress relief, or better sleep — I've got you covered.\n\nTry: *\"Create a 7-day weekly workout plan with Push, Pull, Legs, Core and Rest days\"* — tasks will be automatically saved to your tracker!",'bot');
+  updateStats();msgs.scrollTop=msgs.scrollHeight;
 })();
 </script>
 </body>
