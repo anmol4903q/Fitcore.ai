@@ -5,22 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FITCORE.AI — Chat</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--storm:#657079;--dark:#47484a;--storm-light:#8a9aa6;--storm-dim:rgba(101,112,121,0.15);--bg:#0e0f10;--surface:#1e2024;--border:rgba(101,112,121,0.2);--text:#e8eaec;--text-muted:#7a8490;--font-display:'Bebas Neue',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;--green:#4caf7d;--red:#e05c5c;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(101,112,121,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(101,112,121,0.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+@keyframes statusPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,125,.4)}50%{box-shadow:0 0 0 4px rgba(76,175,125,0)}}
+@keyframes dot{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
 header{position:relative;z-index:20;border-bottom:1px solid var(--border);background:rgba(14,15,16,0.92);backdrop-filter:blur(12px);flex-shrink:0;display:flex;align-items:center;padding:10px 24px;gap:12px;}
 .logo-icon{border:1.5px solid var(--storm);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;}
 .logo-icon svg{width:14px;height:14px;stroke:var(--storm-light);fill:none;stroke-width:1.8;stroke-linecap:round;}
 .logo-text{font-family:var(--font-display);font-size:22px;letter-spacing:2px;color:var(--text);line-height:1;}
 .logo-text span{color:var(--storm-light);}
 .logo-dot{display:inline-block;width:5px;height:5px;background:var(--storm);border-radius:50%;margin-left:2px;vertical-align:super;animation:pulse 2.4s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
-.compact-status{display:flex;align-items:center;gap:5px;margin-left:auto;}
+.compact-status{display:flex;align-items:center;gap:5px;}
 .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:statusPulse 2s ease-in-out infinite;}
-@keyframes statusPulse{0%,100%{box-shadow:0 0 0 0 rgba(76,175,125,.4);}50%{box-shadow:0 0 0 4px rgba(76,175,125,0);}}
 .compact-status span{font-family:var(--font-mono);font-size:9px;color:var(--green);letter-spacing:1px;}
+
+/* Profile button */
+#profileBtnWrap{margin-left:auto;position:relative;}
+.profile-avatar-btn{width:36px;height:36px;border-radius:50%;border:2px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:border-color .2s,transform .15s;padding:0;flex-shrink:0;}
+.profile-avatar-btn img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.profile-avatar-btn .av-initials{font-family:var(--font-display);font-size:14px;color:var(--storm-light);letter-spacing:1px;line-height:1;}
+.profile-avatar-btn svg{width:16px;height:16px;stroke:var(--text-muted);fill:none;stroke-width:1.8;stroke-linecap:round;}
+.profile-avatar-btn:hover{border-color:var(--storm);transform:scale(1.05);}
+.logged-btn{border-color:var(--storm)!important;}
+.guest-ring{border-color:rgba(101,112,121,.4);}
+.profile-avatar-wrap{position:relative;}
+.profile-dropdown{position:absolute;top:calc(100% + 10px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;width:230px;padding:16px;box-shadow:0 16px 48px rgba(0,0,0,.6);z-index:150;opacity:0;pointer-events:none;transform:translateY(-6px);transition:all .2s ease;}
+.profile-dropdown.open{opacity:1;pointer-events:all;transform:translateY(0);}
+.pd-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--storm);margin-bottom:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--storm-dim);}
+.pd-avatar img{width:100%;height:100%;object-fit:cover;}
+.pd-avatar .pd-av-initials{font-family:var(--font-display);font-size:18px;color:var(--storm-light);}
+.pd-name{font-weight:600;font-size:14px;color:var(--text);}
+.pd-email{font-size:11px;color:var(--text-muted);margin-top:2px;font-family:var(--font-mono);word-break:break-all;}
+.pd-mode{font-size:10px;color:var(--green);margin-top:5px;font-family:var(--font-mono);letter-spacing:.5px;display:flex;align-items:center;gap:4px;}
+.pd-mode::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);animation:statusPulse 2s infinite;}
+.pd-divider{height:1px;background:var(--border);margin:12px 0;}
+.pd-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:13px;cursor:pointer;transition:all .15s;}
+.pd-btn:hover{background:var(--storm-dim);color:var(--text);border-color:var(--storm);}
+.pd-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;}
+.guest-prompt{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;}
+.pd-signin-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;border:1px solid var(--storm);border-radius:8px;background:var(--storm-dim);color:var(--storm-light);font-family:var(--font-body);font-size:13px;cursor:pointer;transition:all .15s;}
+.pd-signin-btn:hover{background:var(--storm);color:#fff;}
+
 .layout{flex:1;display:flex;position:relative;z-index:10;overflow:hidden;min-height:0;}
 .sidebar{width:240px;border-right:1px solid var(--border);background:rgba(20,21,23,.8);display:flex;flex-direction:column;padding:16px 14px;gap:6px;flex-shrink:0;overflow-y:auto;}
 .sidebar-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;padding:0 4px;margin-bottom:4px;}
@@ -39,7 +73,6 @@ header{position:relative;z-index:20;border-bottom:1px solid var(--border);backgr
 .messages::-webkit-scrollbar{width:4px;}
 .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 .msg-row{display:flex;gap:12px;max-width:760px;animation:fadeUp .25s ease;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .msg-row.user{align-self:flex-end;flex-direction:row-reverse;}
 .avatar{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;margin-top:2px;}
 .avatar.bot{background:linear-gradient(135deg,var(--storm),var(--dark));color:#fff;font-family:var(--font-display);letter-spacing:1px;}
@@ -52,7 +85,7 @@ header{position:relative;z-index:20;border-bottom:1px solid var(--border);backgr
 .bubble ul,.bubble ol{padding-left:18px;margin:6px 0;display:flex;flex-direction:column;gap:3px;}
 .bubble li{font-size:14px;line-height:1.6;}
 .bubble h1,.bubble h2,.bubble h3{font-family:var(--font-display);letter-spacing:1px;color:var(--storm-light);margin:10px 0 4px;}
-.bubble h1{font-size:20px;}.bubble h2{font-size:17px;}.bubble h3{font-size:15px;}
+.bubble h1{font-size:20px}.bubble h2{font-size:17px}.bubble h3{font-size:15px}
 .bubble code{font-family:var(--font-mono);font-size:12px;background:rgba(101,112,121,.2);padding:1px 5px;border-radius:4px;}
 .bubble hr{border:none;border-top:1px solid var(--border);margin:8px 0;}
 .msg-time{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:4px;padding:0 4px;}
@@ -74,7 +107,6 @@ header{position:relative;z-index:20;border-bottom:1px solid var(--border);backgr
 .typing-dots span{width:6px;height:6px;background:var(--storm-light);border-radius:50%;animation:dot 1.2s ease-in-out infinite;}
 .typing-dots span:nth-child(2){animation-delay:.2s;}
 .typing-dots span:nth-child(3){animation-delay:.4s;}
-@keyframes dot{0%,80%,100%{transform:scale(.7);opacity:.4;}40%{transform:scale(1);opacity:1;}}
 .right-panel{width:210px;border-left:1px solid var(--border);background:rgba(20,21,23,.8);padding:16px 14px;display:flex;flex-direction:column;gap:14px;flex-shrink:0;overflow-y:auto;}
 .panel-section-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;}
 .tip-card{padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--storm-dim);font-size:12px;color:var(--text-muted);line-height:1.6;}
@@ -85,22 +117,55 @@ header{position:relative;z-index:20;border-bottom:1px solid var(--border);backgr
 .metric-val{font-family:var(--font-mono);font-size:11px;color:var(--storm-light);}
 .toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:var(--font-body);color:var(--text);animation:toastIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);}
 .toast.success{border-color:rgba(76,175,125,.4);color:var(--green);}
-@keyframes toastIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.toast.error{border-color:rgba(224,92,92,.4);color:var(--red);}
+
+/* AUTH MODAL */
+.auth-modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}
+.auth-modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:420px;max-width:calc(100vw - 32px);padding:32px;position:relative;animation:fadeUp .25s ease;}
+.auth-tabs{display:flex;gap:4px;background:rgba(101,112,121,.12);border-radius:10px;padding:4px;margin-bottom:24px;}
+.auth-tab-btn{flex:1;padding:8px;border:none;border-radius:7px;font-family:var(--font-body);font-size:13px;cursor:pointer;transition:all .15s;background:transparent;color:var(--text-muted);}
+.auth-tab-btn.active{background:var(--storm-dim);color:var(--text);border:1px solid var(--border);}
+.auth-panel{display:none;flex-direction:column;gap:12px;}
+.auth-panel.active{display:flex;}
+.auth-field{display:flex;flex-direction:column;gap:5px;}
+.auth-label{font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;}
+.auth-input{background:rgba(101,112,121,.1);border:1px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--text);font-family:var(--font-body);font-size:14px;outline:none;transition:border-color .2s;width:100%;}
+.auth-input:focus{border-color:var(--storm);}
+.auth-submit{padding:11px;border:none;border-radius:9px;background:var(--storm);color:#fff;font-family:var(--font-body);font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;}
+.auth-submit:hover{background:var(--storm-light);}
+.auth-error{display:none;font-size:12px;color:var(--red);padding:8px 12px;background:rgba(224,92,92,.1);border-radius:7px;border:1px solid rgba(224,92,92,.2);}
+.auth-divider{display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:11px;font-family:var(--font-mono);}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-guest-btn{width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:13px;cursor:pointer;transition:all .15s;}
+.auth-guest-btn:hover{border-color:var(--storm);color:var(--text);}
+.auth-close{position:absolute;top:16px;right:16px;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;padding:2px 8px;border-radius:6px;transition:color .15s;}
+.auth-close:hover{color:var(--text);}
+
 @media(max-width:700px){.sidebar,.right-panel{display:none;}.messages{padding:16px 14px;}.bubble{font-size:13px;max-width:calc(100vw - 80px);}.quick-prompts{padding:0 14px 8px;}.input-bar{padding:10px 14px 14px;}.input-hint{display:none;}}
 </style>
 </head>
 <body>
+
+<!-- Google Identity Services init -->
+<div id="g_id_onload"
+  data-client_id="YOUR_GOOGLE_CLIENT_ID"
+  data-callback="handleGoogleCredential"
+  data-auto_prompt="false">
+</div>
+
 <header>
   <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M4 12h4M16 12h4M12 4v4M12 16v4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9l-2.8 2.8"/></svg></div>
   <div class="logo-text">FITCORE<span>.AI</span><span class="logo-dot"></span></div>
   <div class="compact-status"><div class="status-dot"></div><span>ONLINE</span></div>
+  <div id="profileBtnWrap"></div>
 </header>
+
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-label">Navigation</div>
     <a class="sidebar-btn active" href="index.html"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Chat</a>
     <a class="sidebar-btn" href="workout.html"><svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 8h4M17 8h4M3 16h4M17 16h4"/></svg>Workout Planner</a>
-    <a class="sidebar-btn" href="diet.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Diet Advisor</a>
+    <a class="sidebar-btn" href="mental.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Mental Wellness</a>
     <a class="sidebar-btn" href="progress.html"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress Tracker</a>
     <div class="sidebar-divider"></div>
     <button class="sidebar-btn" onclick="clearChat()"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>Clear Chat</button>
@@ -114,6 +179,7 @@ header{position:relative;z-index:20;border-bottom:1px solid var(--border);backgr
       </div>
     </div>
   </aside>
+
   <main class="chat-area">
     <div class="messages" id="messages"></div>
     <div class="quick-prompts" id="quickPrompts">
@@ -130,6 +196,7 @@ header{position:relative;z-index:20;border-bottom:1px solid var(--border);backgr
       <div class="input-hint">Enter to send · Shift+Enter for new line</div>
     </div>
   </main>
+
   <aside class="right-panel">
     <div><div class="panel-section-label">Daily Tip</div><div class="tip-card" id="dailyTip"></div></div>
     <div>
@@ -138,15 +205,244 @@ header{position:relative;z-index:20;border-bottom:1px solid var(--border);backgr
       <div class="metric-row"><span class="metric-label">Week #</span><span class="metric-val" id="metricWeek">—</span></div>
     </div>
     <div><div class="panel-section-label">Active Mode</div><div class="tip-card"><strong>General Chat</strong>Ask anything about fitness, nutrition, or mental wellness.</div></div>
+    <div>
+      <div class="panel-section-label">Sync Status</div>
+      <div class="tip-card" id="syncStatusCard"><strong>Guest Mode</strong>Data saved locally. Sign in for cloud sync.</div>
+    </div>
   </aside>
 </div>
+
+<!-- AUTH MODAL -->
+<div class="auth-modal-overlay" id="authModal" style="display:none;">
+  <div class="auth-modal">
+    <button class="auth-close" onclick="closeAuthModal()">✕</button>
+    <div style="font-family:var(--font-display);font-size:26px;letter-spacing:3px;margin-bottom:4px;color:var(--text);">FITCORE<span style="color:var(--storm-light);">.AI</span></div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.5;">Sign in to sync your progress, workouts, and profile across all your devices.</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" id="tabBtnLogin" onclick="showAuthTab('login')">Sign In</button>
+      <button class="auth-tab-btn" id="tabBtnRegister" onclick="showAuthTab('register')">Register</button>
+    </div>
+
+    <!-- Google button -->
+    <div style="display:flex;justify-content:center;margin-bottom:16px;">
+      <div id="googleBtnContainer"></div>
+    </div>
+
+    <div class="auth-divider">OR</div>
+
+    <!-- Login -->
+    <div class="auth-panel active" id="authPanel_login">
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input id="loginEmail" type="email" class="auth-input" placeholder="you@example.com">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input id="loginPass" type="password" class="auth-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')doEmailAuth('login')">
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button class="auth-submit" onclick="doEmailAuth('login')">Sign In</button>
+    </div>
+
+    <!-- Register -->
+    <div class="auth-panel" id="authPanel_register">
+      <div class="auth-field">
+        <label class="auth-label">Your Name</label>
+        <input id="regName" type="text" class="auth-input" placeholder="e.g. Alex">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input id="regEmail" type="email" class="auth-input" placeholder="you@example.com">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input id="regPass" type="password" class="auth-input" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doEmailAuth('register')">
+      </div>
+      <div class="auth-error" id="regError"></div>
+      <button class="auth-submit" onclick="doEmailAuth('register')">Create Account</button>
+    </div>
+
+    <div style="margin-top:16px;"></div>
+    <div class="auth-divider" style="margin-bottom:12px;"></div>
+    <button class="auth-guest-btn" onclick="continueAsGuest()">Continue as Guest (data stays local)</button>
+    <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5;">Guest data is stored only on this device.<br>Sign in to access your data from anywhere.</div>
+  </div>
+</div>
+
 <script>
-const BACKEND='https://fitcore-backend-ib8k.onrender.com';
+// ═══════════════════════════════════════════════
+// AUTH SYSTEM
+// ═══════════════════════════════════════════════
+const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
+const AUTH_KEY = 'fitcore_auth_v1';
+
+function getAuth(){try{return JSON.parse(localStorage.getItem(AUTH_KEY))||null;}catch{return null;}}
+function setAuth(d){localStorage.setItem(AUTH_KEY,JSON.stringify(d));}
+function clearAuth(){localStorage.removeItem(AUTH_KEY);}
+
+function getUserId(){
+  const a=getAuth();
+  if(a&&a.uid)return a.uid;
+  let id=localStorage.getItem('fitcore_user_id');
+  if(!id){id='guest_'+Math.random().toString(36).substr(2,9)+'_'+Date.now();localStorage.setItem('fitcore_user_id',id);}
+  return id;
+}
+
+function renderProfileBtn(){
+  const a=getAuth();
+  const wrap=document.getElementById('profileBtnWrap');
+  if(!wrap)return;
+  if(!a||a.mode==='guest'){
+    wrap.innerHTML=`
+      <div class="profile-avatar-wrap">
+        <button class="profile-avatar-btn guest-ring" onclick="toggleProfileMenu()" title="Guest — click to sign in">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <p class="guest-prompt">You're browsing as a <strong style="color:var(--text)">Guest</strong>. Data is saved locally on this device only.</p>
+          <button class="pd-signin-btn" onclick="closeProfileMenu();openAuthModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="14" height="14"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign In / Register
+          </button>
+        </div>
+      </div>`;
+  } else {
+    const initials=(a.name||a.email||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const avatarInner=a.picture
+      ?`<img src="${a.picture}" alt="${initials}" onerror="this.style.display='none';document.getElementById('fallbackInitials').style.display='flex'"><span id="fallbackInitials" class="av-initials" style="display:none">${initials}</span>`
+      :`<span class="av-initials">${initials}</span>`;
+    const modeLabel=a.mode==='google'?'🔵 Google Account':'📧 Email Account';
+    wrap.innerHTML=`
+      <div class="profile-avatar-wrap">
+        <button class="profile-avatar-btn logged-btn" onclick="toggleProfileMenu()" title="${a.name||a.email}">
+          ${avatarInner}
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="pd-avatar">
+            ${a.picture?`<img src="${a.picture}" alt="${initials}" onerror="this.outerHTML='<div class=pd-avatar><span class=pd-av-initials>${initials}</span></div>'">`:`<span class="pd-av-initials">${initials}</span>`}
+          </div>
+          <div class="pd-name">${a.name||'User'}</div>
+          <div class="pd-email">${a.email||''}</div>
+          <div class="pd-mode">${modeLabel} · Cloud Sync ON</div>
+          <div class="pd-divider"></div>
+          <button class="pd-btn" onclick="doSignOut()">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out
+          </button>
+        </div>
+      </div>`;
+  }
+  updateSyncCard();
+}
+
+function toggleProfileMenu(){
+  const dd=document.getElementById('profileDropdown');
+  if(dd)dd.classList.toggle('open');
+}
+function closeProfileMenu(){
+  const dd=document.getElementById('profileDropdown');
+  if(dd)dd.classList.remove('open');
+}
+document.addEventListener('click',e=>{
+  const wrap=document.querySelector('.profile-avatar-wrap');
+  if(wrap&&!wrap.contains(e.target)){closeProfileMenu();}
+});
+
+function doSignOut(){
+  clearAuth();closeProfileMenu();renderProfileBtn();
+  showToast('Signed out. Local data preserved.');
+}
+
+function updateSyncCard(){
+  const a=getAuth();const el=document.getElementById('syncStatusCard');if(!el)return;
+  if(!a||a.mode==='guest'){
+    el.innerHTML='<strong>Guest Mode</strong>Data saved locally. <span style="color:var(--storm-light);cursor:pointer;text-decoration:underline" onclick="openAuthModal()">Sign in</span> for cloud sync.';
+  } else {
+    el.innerHTML=`<strong style="color:var(--green);">☁ Cloud Sync ON</strong>Signed in as ${a.name||a.email}. Progress synced.`;
+  }
+}
+
+// ── Auth Modal ──
+function openAuthModal(){closeProfileMenu();document.getElementById('authModal').style.display='flex';renderGoogleBtn();}
+function closeAuthModal(){document.getElementById('authModal').style.display='none';}
+function showAuthTab(tab){
+  document.getElementById('tabBtnLogin').classList.toggle('active',tab==='login');
+  document.getElementById('tabBtnRegister').classList.toggle('active',tab==='register');
+  document.getElementById('authPanel_login').classList.toggle('active',tab==='login');
+  document.getElementById('authPanel_register').classList.toggle('active',tab==='register');
+  clearAuthErrors();
+}
+function clearAuthErrors(){
+  ['loginError','regError'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.style.display='none';}});
+}
+function showAuthError(panelId,msg){
+  const el=document.getElementById(panelId);if(!el)return;
+  el.textContent=msg;el.style.display='block';
+}
+
+function renderGoogleBtn(){
+  const container=document.getElementById('googleBtnContainer');if(!container)return;
+  if(window.google&&google.accounts){
+    google.accounts.id.renderButton(container,{theme:'filled_black',size:'large',width:356,shape:'pill',text:'signin_with'});
+  } else {
+    container.innerHTML=`<button onclick="showAuthError('loginError','Google sign-in not available. Use email instead.')" style="width:356px;max-width:100%;padding:10px;border:1px solid var(--border);border-radius:24px;background:var(--surface);color:var(--text);font-family:var(--font-body);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Continue with Google
+    </button>`;
+  }
+}
+
+// Google callback
+function handleGoogleCredential(response){
+  try{
+    const payload=JSON.parse(atob(response.credential.split('.')[1]));
+    const auth={mode:'google',uid:'g_'+payload.sub,name:payload.name,email:payload.email,picture:payload.picture};
+    setAuth(auth);closeAuthModal();renderProfileBtn();
+    showToast(`Welcome, ${payload.name}! ☁️ Cloud sync active.`,'success');
+  }catch(e){showAuthError('loginError','Google sign-in failed. Try again.');}
+}
+
+async function doEmailAuth(mode){
+  const email=(document.getElementById(mode==='login'?'loginEmail':'regEmail').value||'').trim();
+  const pass=(document.getElementById(mode==='login'?'loginPass':'regPass').value||'').trim();
+  const name=mode==='register'?(document.getElementById('regName').value||'').trim():'';
+  const errId=mode==='login'?'loginError':'regError';
+  if(!email||!pass){showAuthError(errId,'Email and password are required.');return;}
+  if(pass.length<6){showAuthError(errId,'Password must be at least 6 characters.');return;}
+  const uid='e_'+btoa(email.toLowerCase()).replace(/[^a-z0-9]/gi,'').slice(0,20);
+  try{
+    const res=await fetch(`${BACKEND}/auth/${mode}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass,name,uid})});
+    const data=await res.json();
+    if(!res.ok){showAuthError(errId,data.error||'Authentication failed.');return;}
+    const auth={mode:'email',uid:data.uid||uid,name:data.name||name||email.split('@')[0],email};
+    setAuth(auth);closeAuthModal();renderProfileBtn();
+    showToast(`Welcome${auth.name?', '+auth.name:''}! ☁️ Cloud sync active.`,'success');
+  }catch{
+    // Backend doesn't have auth endpoint yet — local fallback
+    const auth={mode:'email',uid,name:name||email.split('@')[0],email};
+    setAuth(auth);closeAuthModal();renderProfileBtn();
+    showToast(`Signed in as ${auth.name}.`,'success');
+  }
+}
+
+function continueAsGuest(){
+  const uid=getUserId();
+  setAuth({mode:'guest',uid,name:'Guest'});
+  closeAuthModal();renderProfileBtn();
+  showToast('Continuing as guest. Data saved locally.');
+}
+
+// Close modal on overlay click
+document.getElementById('authModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAuthModal();});
+
+// ═══════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════
 const msgs=document.getElementById('messages'),input=document.getElementById('userInput'),sendBtn=document.getElementById('sendBtn'),qp=document.getElementById('quickPrompts');
 let chatLog=[];
 const STORAGE_KEY='fitcore_chat_v4',PLAN_KEY='fitcore_plan_v1';
-function getUserId(){let id=localStorage.getItem('fitcore_user_id');if(!id){id='user_'+Math.random().toString(36).substr(2,9)+'_'+Date.now();localStorage.setItem('fitcore_user_id',id);}return id;}
-const USER_ID=getUserId();
+
 const tips=[{title:'Recovery',text:'Rest days are not wasted days. Muscles grow during recovery, not during the workout.'},{title:'Hydration',text:'Drink 2–3L of water daily. Dehydration cuts performance by up to 20%.'},{title:'Sleep',text:'7–9 hours of sleep regulates cortisol, hunger hormones, and recovery.'},{title:'Consistency',text:'A mediocre plan done consistently beats a perfect plan done occasionally.'},{title:'Breathing',text:'Box breathing (4-4-4-4) for 5 minutes reduces cortisol and anxiety fast.'}];
 const tip=tips[new Date().getDay()%tips.length];
 document.getElementById('dailyTip').innerHTML=`<strong>${tip.title}</strong>${tip.text}`;
@@ -154,12 +450,14 @@ function getWeekNumber(d=new Date()){const date=new Date(Date.UTC(d.getFullYear(
 function updateStats(){const u=chatLog.filter(m=>m.role==='user').length;document.getElementById('statMsgs').textContent=u;document.getElementById('metricMsgs').textContent=u||'—';const first=localStorage.getItem('fitcore_first_day');if(first)document.getElementById('statDays').textContent=Math.floor((Date.now()-parseInt(first))/86400000)+1;document.getElementById('metricWeek').textContent='W'+getWeekNumber();try{document.getElementById('statLogs').textContent=localStorage.getItem('fitcore_log_count')||0;}catch(e){}}
 function saveChatLog(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(chatLog.slice(-100)));}catch(e){}}
 function loadChatLog(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return false;const saved=JSON.parse(raw);if(!Array.isArray(saved)||!saved.length)return false;chatLog=saved;saved.forEach(m=>renderMsg(m.content,m.role==='assistant'?'bot':'user',m.time,false));return true;}catch(e){return false;}}
+
 const DAY_TYPE_KEYWORDS={push:['push','chest','shoulder','tricep','bench','press','overhead'],pull:['pull','back','bicep','row','deadlift','lat','chin'],legs:['leg','squat','lunge','glute','hamstring','quad','calf','lower body'],core:['core','abs','plank','crunch','oblique','abdominal'],rest:['rest','recovery','active recovery','off','off day','stretch','yoga','walk']};
 function detectDayType(text){const low=text.toLowerCase();for(const[type,kws]of Object.entries(DAY_TYPE_KEYWORDS)){if(kws.some(k=>low.includes(k)))return type;}return'general';}
 function getTodayDayTypeFromPlan(planText){const lines=planText.split('\n');const todayDow=new Date().toLocaleDateString('en',{weekday:'long'}).toLowerCase();const dowAbbrs={monday:'mon',tuesday:'tue',wednesday:'wed',thursday:'thu',friday:'fri',saturday:'sat',sunday:'sun'};const todayAbbr=dowAbbrs[todayDow]||todayDow.slice(0,3);for(const line of lines){const low=line.toLowerCase();if(low.includes(todayDow)||low.includes(todayAbbr)){return detectDayType(line);}}return null;}
-function extractTasksFromBotMessage(text,dayType){const tasks=[];const lines=text.split('\n');for(const line of lines){const clean=line.replace(/^[\s\-\*•\d\.]+/,'').trim();if(clean.length<8||clean.length>120)continue;if(/^(day|week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(clean))continue;let badge='workout';if(/water|drink|hydrat|litre|liter/i.test(clean))badge='water';else if(/eat|meal|diet|protein|calori|vegetable|fruit|nutrition|breakfast|lunch|dinner/i.test(clean))badge='diet';tasks.push({task_text:clean,day_type:dayType,badge});}const seen=new Set();return tasks.filter(t=>{if(seen.has(t.task_text))return false;seen.add(t.task_text);return true;});}
+function extractTasksFromBotMessage(text,dayType){const tasks=[];const lines=text.split('\n');for(const line of lines){const clean=line.replace(/^[\s\-\*•\d\.]+/,'').trim();if(clean.length<8||clean.length>120)continue;if(/^(day|week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(clean))continue;let badge='workout';if(/water|drink|hydrat/i.test(clean))badge='water';else if(/eat|meal|diet|protein|calori|nutrition/i.test(clean))badge='diet';tasks.push({task_text:clean,day_type:dayType,badge});}const seen=new Set();return tasks.filter(t=>{if(seen.has(t.task_text))return false;seen.add(t.task_text);return true;});}
 function parsePlanAndSaveTasks(botText){localStorage.setItem(PLAN_KEY,botText);const detectedType=getTodayDayTypeFromPlan(botText)||detectDayType(botText);const tasks=extractTasksFromBotMessage(botText,detectedType);if(tasks.length===0)return;saveTasks(tasks);}
-async function saveTasks(tasks){try{const res=await fetch(`${BACKEND}/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:USER_ID,tasks})});if(!res.ok)throw new Error();showToast('Tasks saved for today ✓','success');}catch(e){}}
+async function saveTasks(tasks){try{const res=await fetch(`${BACKEND}/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:getUserId(),tasks})});if(!res.ok)throw new Error();showToast('Tasks saved for today ✓','success');}catch(e){}}
+
 function parseMarkdown(text){return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>').replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/_(.+?)_/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/^---$/gm,'<hr>').replace(/^\s*[-*•] (.+)$/gm,'<li>$1</li>').replace(/^\s*\d+\. (.+)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>\n?)+/g,m=>`<ul>${m}</ul>`).replace(/\n(?!<)/g,'<br>');}
 function renderMsg(text,role,time,animate){const row=document.createElement('div');row.className='msg-row '+role;if(!animate)row.style.animation='none';const av=document.createElement('div');av.className='avatar '+role;av.textContent=role==='bot'?'FC':'👤';const col=document.createElement('div');col.className='msg-col';const bub=document.createElement('div');bub.className='bubble '+role;bub.innerHTML=role==='bot'?parseMarkdown(text):text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');const ts=document.createElement('div');ts.className='msg-time';ts.textContent=time||new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});col.appendChild(bub);col.appendChild(ts);row.appendChild(av);row.appendChild(col);msgs.appendChild(row);msgs.scrollTop=msgs.scrollHeight;return bub;}
 function addMsg(text,role){return renderMsg(text,role,null,true);}
@@ -176,7 +474,7 @@ async function sendMessage(){
   const userTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   addMsg(text,'user');chatLog.push({role:'user',content:text,time:userTime});saveChatLog();updateStats();addTyping();
   try{
-    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,user_id:USER_ID,history:chatLog.slice(-20).map(m=>({role:m.role,content:m.content}))})});
+    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,user_id:getUserId(),history:chatLog.slice(-20).map(m=>({role:m.role,content:m.content}))})});
     if(!res.ok)throw new Error();const data=await res.json();removeTyping();
     const botTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     addMsg(data.reply,'bot');chatLog.push({role:'assistant',content:data.reply,time:botTime});saveChatLog();updateStats();
@@ -185,13 +483,18 @@ async function sendMessage(){
   }catch(err){removeTyping();addMsg('Cannot reach the server right now. Wait 30 seconds and try again — the server may be waking up.','bot');}
   sendBtn.disabled=false;input.focus();
 }
+
 let toastTimer=null;
-function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)ex.remove();const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3000);}
+function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)ex.remove();const t=document.createElement('div');t.className='toast '+(type||'');t.textContent=msg;document.body.appendChild(t);clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.remove(),3500);}
+
 (function init(){
   if(!localStorage.getItem('fitcore_first_day'))localStorage.setItem('fitcore_first_day',Date.now().toString());
+  renderProfileBtn();
   const hadHistory=loadChatLog();
-  if(!hadHistory)addMsg("Hey! I'm **FITCORE.AI** — your personal fitness and mental wellness companion.\n\nTell me your goal and I'll build a plan around you. Whether it's weight loss, muscle gain, stress relief, or better sleep — I've got you covered.\n\nTry: *\"Create a 7-day weekly workout plan with Push, Pull, Legs, Core and Rest days\"* — tasks will be automatically saved to your tracker!",'bot');
+  if(!hadHistory)addMsg("Hey! I'm **FITCORE.AI** — your personal fitness and mental wellness companion.\n\nTell me your goal and I'll build a plan around you. Whether it's weight loss, muscle gain, stress relief, or better sleep — I've got you covered.\n\nTry: *\"Create a 7-day weekly workout plan with Push, Pull, Legs, Core and Rest days\"*",'bot');
   updateStats();msgs.scrollTop=msgs.scrollHeight;
+  // Auto-show auth modal if not set
+  if(!getAuth()){setTimeout(()=>openAuthModal(),1200);}
 })();
 </script>
 </body>
