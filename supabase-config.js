@@ -4,10 +4,8 @@
 // ═══════════════════════════════════════════════════════════
 
 // ── SUPABASE SETUP ───────────────────────────────────────────
-// Replace these with your actual Supabase project values from:
-// https://app.supabase.com → Project Settings → API
-const SUPABASE_URL    = 'https://eswkbttcgeqbuuadxnbg.supabase.co';      
-const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzd2tidHRjZ2VxYnV1YWR4bmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxOTcwMTYsImV4cCI6MjA5Mjc3MzAxNn0.ujQh3jK2EMUAiO3s28Edh7mdl45KYuQ1-3TpnaPJXKY';  // public anon key
+const SUPABASE_URL    = 'https://eswkbttcgeqbuuadxnbg.supabase.co';
+const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzd2tidHRjZ2VxYnV1YWR4bmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxOTcwMTYsImV4cCI6MjA5Mjc3MzAxNn0.ujQh3jK2EMUAiO3s28Edh7mdl45KYuQ1-3TpnaPJXKY';
 
 // Load Supabase client (loaded via CDN in HTML)
 let _supabase = null;
@@ -31,19 +29,20 @@ function clearLocalAuth() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-// ── USER ID ──────────────────────────────────────────────────
+// ── USER ID (FIXED) ──────────────────────────────────────────
 function getUserId() {
-  const a = getLocalAuth();
-  if (a && a.uid) return a.uid;
+  const auth = getLocalAuth();
+  if (auth && auth.uid) return auth.uid;
+
+  // Fallback for guest mode — generate a stable anonymous id
   let id = localStorage.getItem('fitcore_user_id');
   if (!id) {
-    function getUserId() {
-  const auth = getLocalAuth();
-  return auth?.uid || null;
-}
+    id = 'guest_' + Math.random().toString(36).slice(2, 14) + Date.now().toString(36);
+    localStorage.setItem('fitcore_user_id', id);
+  }
   return id;
 }
- 
+
 // ── GUARD: redirect to auth if not logged in ─────────────────
 function requireAuth() {
   const auth = getLocalAuth();
@@ -60,7 +59,7 @@ async function supabaseGoogleLogin() {
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + '/index.html'
+      redirectTo: window.location.origin + window.location.pathname.replace(/auth\.html$/, 'index.html')
     }
   });
   if (error) throw error;
@@ -90,38 +89,47 @@ async function supabaseLogin(email, password) {
 
 // ── SUPABASE SIGN OUT ────────────────────────────────────────
 async function supabaseSignOut() {
-  const sb = getSupabase();
-  await sb.auth.signOut();
+  try {
+    const sb = getSupabase();
+    await sb.auth.signOut();
+  } catch (e) {
+    console.warn('Supabase signOut failed:', e);
+  }
   clearLocalAuth();
   window.location.href = 'auth.html';
 }
 
 // ── HANDLE SUPABASE SESSION (call on every page load) ────────
 async function handleSupabaseSession() {
-  const sb = getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
+  try {
+    const sb = getSupabase();
+    const { data: { session } } = await sb.auth.getSession();
 
-  if (session && session.user) {
-    const user = session.user;
-    const meta = user.user_metadata || {};
-    const auth = {
-      uid:     user.id,
-      name:    meta.full_name || meta.name || meta.display_name || user.email.split('@')[0],
-      email:   user.email,
-      picture: meta.avatar_url || meta.picture || null,
-      mode:    user.app_metadata?.provider || 'email',
-      provider: user.app_metadata?.provider || 'email'
-    };
-    setLocalAuth(auth);
-    return auth;
+    if (session && session.user) {
+      const user = session.user;
+      const meta = user.user_metadata || {};
+      const auth = {
+        uid:     user.id,
+        name:    meta.full_name || meta.name || meta.display_name || user.email.split('@')[0],
+        email:   user.email,
+        picture: meta.avatar_url || meta.picture || null,
+        mode:    user.app_metadata?.provider || 'email',
+        provider: user.app_metadata?.provider || 'email'
+      };
+      setLocalAuth(auth);
+      return auth;
+    }
+  } catch (e) {
+    console.warn('Supabase session error:', e.message);
   }
-  return null;
+  // Fall back to whatever is in localStorage
+  return getLocalAuth();
 }
 
 // ── SAVE USER PROFILE TO SUPABASE DB ─────────────────────────
 async function saveUserToSupabase(auth) {
-  const sb = getSupabase();
   try {
+    const sb = getSupabase();
     await sb.from('users').upsert({
       id:         auth.uid,
       name:       auth.name,
@@ -135,7 +143,7 @@ async function saveUserToSupabase(auth) {
   }
 }
 
-// ── BACKEND FALLBACK (your Render backend) ───────────────────
+// ── BACKEND FALLBACK
 const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
 
 // Auto-listen for auth state changes
@@ -156,7 +164,6 @@ const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
         };
         setLocalAuth(auth);
         await saveUserToSupabase(auth);
-        // Redirect to main app if on auth page
         if (window.location.pathname.includes('auth.html')) {
           window.location.href = 'index.html';
         }
@@ -167,7 +174,7 @@ const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
         }
       }
     });
-  } catch(e) {
+  } catch (e) {
     // Supabase not configured yet
   }
 })();
