@@ -1,370 +1,120 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
-║           FITCORE.AI — Production Backend v3.1               ║
-║   Flask + Groq AI + SQLite (WAL) + Supabase-aware auth       ║
-║   v3.1: bcrypt passwords, fixed system_override, rate limit  ║
+║         FITCORE.AI — Backend v4.0 (Supabase Only)           ║
+║                                                              ║
+║  Database   : Supabase PostgreSQL (zero SQLite)             ║
+║  Auth       : Supabase handles it — we just trust user_id   ║
+║  AI         : Groq + LLaMA 3.3 70B                         ║
+║  Server     : Flask + Gunicorn                               ║
 ╚══════════════════════════════════════════════════════════════╝
 """
 
 import os
 import json
-import sqlite3
-import hashlib
-import secrets
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from groq import Groq
-
-# Try to import bcrypt — fall back to sha256 if not installed
-try:
-    import bcrypt
-    HAS_BCRYPT = True
-except ImportError:
-    HAS_BCRYPT = False
-
-# Try rate limiter
-try:
-    from flask_limiter import Limiter
-    from flask_limiter.util import get_remote_address
-    HAS_LIMITER = True
-except ImportError:
-    HAS_LIMITER = False
+from supabase import create_client, Client
 
 # ══════════════════════════════════════════════════════════════
-# APP INITIALISATION
+# APP SETUP
 # ══════════════════════════════════════════════════════════════
 app = Flask(__name__)
-CORS(app, origins="*", supports_credentials=False)
-
-if HAS_LIMITER:
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-        default_limits=["200 per hour", "30 per minute"],
-        storage_uri="memory://",
-    )
-else:
-    limiter = None
+CORS(app, origins="*")
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    format="%(asctime)s [%(levelname)s] %(message)s"
 )
 log = logging.getLogger("fitcore")
 
-DB_FILE = os.environ.get("DB_FILE", "fitcore.db")
-
 # ══════════════════════════════════════════════════════════════
-# DATABASE
+# SUPABASE CLIENT
 # ══════════════════════════════════════════════════════════════
-def get_db():
-    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=NORMAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA temp_store=MEMORY")
-    return conn
+SUPABASE_URL  = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY  = os.environ.get("SUPABASE_SERVICE_KEY", "")  # service_role key for backend
 
+if not SUPABASE_URL or not SUPABASE_KEY:
+    log.warning("⚠️  SUPABASE_URL or SUPABASE_SERVICE_KEY not set!")
 
-def _add_col(conn, table, col, typedef):
-    try:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}")
-    except Exception:
-        pass
-
-
-def init_db():
-    conn = get_db()
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            user_id       TEXT PRIMARY KEY,
-            name          TEXT,
-            email         TEXT,
-            password_hash TEXT,
-            provider      TEXT DEFAULT 'guest',
-            picture       TEXT,
-            created_at    TEXT,
-            last_seen     TEXT
-        )
-    """)
-    for col, td in [
-        ("email",         "TEXT"),
-        ("password_hash", "TEXT"),
-        ("provider",      "TEXT DEFAULT 'guest'"),
-        ("picture",       "TEXT"),
-        ("last_seen",     "TEXT"),
-    ]:
-        _add_col(conn, "users", col, td)
-
-    try:
-        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
-    except Exception:
-        pass
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id    TEXT    NOT NULL,
-            role       TEXT    NOT NULL,
-            content    TEXT    NOT NULL,
-            page       TEXT    DEFAULT 'chat',
-            created_at TEXT    NOT NULL
-        )
-    """)
-    _add_col(conn, "messages", "page", "TEXT DEFAULT 'chat'")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_msgs_user ON messages(user_id, page, id)")
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS user_profile (
-            user_id      TEXT PRIMARY KEY,
-            profile_data TEXT DEFAULT '{}'
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS workout_plans (
-            user_id    TEXT PRIMARY KEY,
-            plan_json  TEXT NOT NULL,
-            raw_text   TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id     TEXT    NOT NULL,
-            task_text   TEXT    NOT NULL,
-            completed   INTEGER DEFAULT 0,
-            date        TEXT    NOT NULL,
-            week_number INTEGER NOT NULL,
-            day_type    TEXT    DEFAULT 'general',
-            badge       TEXT    DEFAULT 'workout',
-            created_at  TEXT    DEFAULT (datetime('now')),
-            UNIQUE(user_id, date, task_text)
-        )
-    """)
-    _add_col(conn, "tasks", "badge",      "TEXT DEFAULT 'workout'")
-    _add_col(conn, "tasks", "created_at", "TEXT DEFAULT (datetime('now'))")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, date)")
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS progress (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id      TEXT    NOT NULL,
-            weight       REAL,
-            workout_done INTEGER DEFAULT 0,
-            date         TEXT    NOT NULL,
-            created_at   TEXT    DEFAULT (datetime('now')),
-            UNIQUE(user_id, date)
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_progress_user ON progress(user_id, date)")
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS mood_log (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id    TEXT NOT NULL,
-            date       TEXT NOT NULL,
-            score      INTEGER NOT NULL,
-            emoji      TEXT,
-            label      TEXT,
-            note       TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(user_id, date)
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS journal (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id    TEXT NOT NULL,
-            date       TEXT NOT NULL,
-            text       TEXT NOT NULL,
-            mood       TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS food_log (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id    TEXT NOT NULL,
-            date       TEXT NOT NULL,
-            name       TEXT NOT NULL,
-            cals       REAL DEFAULT 0,
-            protein    REAL DEFAULT 0,
-            carbs      REAL DEFAULT 0,
-            fat        REAL DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now'))
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_food_user_date ON food_log(user_id, date)")
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS macro_targets (
-            user_id    TEXT PRIMARY KEY,
-            calories   INTEGER,
-            protein    INTEGER,
-            carbs      INTEGER,
-            fat        INTEGER,
-            goal       TEXT DEFAULT 'maintain',
-            updated_at TEXT DEFAULT (datetime('now'))
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS water_log (
-            user_id TEXT NOT NULL,
-            date    TEXT NOT NULL,
-            cups    INTEGER DEFAULT 0,
-            PRIMARY KEY(user_id, date)
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-    log.info("✅  Database ready: %s", DB_FILE)
-
-
-init_db()
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 # ══════════════════════════════════════════════════════════════
 # GROQ AI CLIENT
 # ══════════════════════════════════════════════════════════════
-_groq_api_key = os.environ.get("GROQ_API_KEY", "")
-client = Groq(api_key=_groq_api_key) if _groq_api_key else None
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT = """You are FITCORE.AI — a smart, friendly, expert AI fitness and wellness coach.
 
-You remember everything the user has shared across sessions: name, age, weight, goals, fitness level, dietary preferences, past plans, health conditions, and progress.
+You remember everything the user has shared: name, age, weight, goals, fitness level, dietary preferences, past plans, health conditions, and progress.
 
 Your specialities:
-• Build personalised workout plans (Push/Pull/Legs/Core/Rest structure, 7-day)
-• Calculate macros using Mifflin-St Jeor formula
-• Provide evidence-based nutrition and supplement guidance
-• Support mental wellness: stress, sleep, anxiety, motivation
-• Track and respond to user progress and consistency
+• Build personalised 7-day workout plans (Push/Pull/Legs/Core/Rest structure)
+• Calculate macros using the Mifflin-St Jeor formula
+• Evidence-based nutrition and supplement guidance
+• Mental wellness support: stress, sleep, anxiety, motivation
+• Track and respond to user progress
 
-Response guidelines:
-• Be concise but thorough — no unnecessary filler
-• Use markdown: **bold**, bullet points, headers for plans and lists
-• Always align advice with the user's stated goal and profile
-• When generating weekly plans, always label every day clearly:
-  "Monday — Push Day", "Tuesday — Pull Day", etc.
-• Only discuss fitness, nutrition, and mental wellness topics
+Guidelines:
+• Be concise but thorough — no filler
+• Use markdown: **bold**, bullet points, headers for plans
+• Always align advice with the user's stated goal
+• When generating weekly plans, label every day clearly: "Monday — Push Day"
+• Only discuss fitness, nutrition, and mental wellness
 • Never give medical diagnoses or replace professional medical advice
 """
 
 # ══════════════════════════════════════════════════════════════
-# UTILITIES
+# HELPERS
 # ══════════════════════════════════════════════════════════════
-def today_str():
-    return datetime.now().strftime("%Y-%m-%d")
-
-
 def now_iso():
-    return datetime.now().isoformat()
+    return datetime.utcnow().isoformat()
 
+def today_str():
+    return datetime.utcnow().strftime("%Y-%m-%d")
 
 def get_week_number(date_str=None):
-    d = datetime.strptime(date_str, "%Y-%m-%d") if date_str else datetime.now()
+    d = datetime.strptime(date_str, "%Y-%m-%d") if date_str else datetime.utcnow()
     return int(d.strftime("%V"))
 
+def sb():
+    """Return Supabase client or raise."""
+    if not supabase:
+        raise RuntimeError("Supabase not configured")
+    return supabase
 
-# ── PASSWORD HASHING (bcrypt with SHA-256 fallback) ──────────
-LEGACY_SALT = os.environ.get("PASSWORD_SALT", "fitcore_secure_salt_v2_2024")
+def user_id_from_request():
+    data = request.json or {}
+    return data.get("user_id") or request.args.get("user_id") or "anonymous"
 
-
-def hash_password(password: str) -> str:
-    """Hash a new password using bcrypt if available."""
-    if HAS_BCRYPT:
-        return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
-    # Legacy fallback
-    return "sha256$" + hashlib.sha256((password + LEGACY_SALT).encode()).hexdigest()
-
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify a password against either bcrypt or legacy SHA-256."""
-    if not stored_hash:
-        return False
-    # Legacy SHA-256 hash (no prefix or sha256$ prefix)
-    if stored_hash.startswith("sha256$"):
-        legacy = hashlib.sha256((password + LEGACY_SALT).encode()).hexdigest()
-        return stored_hash == "sha256$" + legacy
-    if len(stored_hash) == 64 and all(c in "0123456789abcdef" for c in stored_hash):
-        # Old plain SHA-256 (pre-prefix)
-        legacy = hashlib.sha256((password + LEGACY_SALT).encode()).hexdigest()
-        return stored_hash == legacy
-    # bcrypt hash
-    if HAS_BCRYPT:
-        try:
-            return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
-        except Exception:
-            return False
-    return False
-
-
-def safe_json(text: str) -> dict:
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
-    try:
-        return json.loads(text)
-    except Exception:
-        return {}
-
-
-# ──────────────────────────────────────────────
-# User helpers
-# ──────────────────────────────────────────────
-def get_or_create_user(user_id: str):
-    if not user_id:
-        return
-    conn = get_db()
-    exists = conn.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    if not exists:
-        conn.execute(
-            "INSERT OR IGNORE INTO users (user_id, provider, created_at, last_seen) VALUES (?, 'guest', ?, ?)",
-            (user_id, now_iso(), now_iso())
-        )
-    else:
-        conn.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now_iso(), user_id))
-    conn.commit()
-    conn.close()
-
-
-# ──────────────────────────────────────────────
-# Profile helpers
-# ──────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════
+# PROFILE HELPERS
+# ══════════════════════════════════════════════════════════════
 def get_profile(user_id: str) -> dict:
-    conn = get_db()
-    row = conn.execute("SELECT profile_data FROM user_profile WHERE user_id = ?", (user_id,)).fetchone()
-    conn.close()
     try:
-        return json.loads(row["profile_data"]) if row else {}
+        res = sb().table("user_profile").select("profile_data").eq("user_id", user_id).single().execute()
+        data = res.data
+        if data and data.get("profile_data"):
+            return json.loads(data["profile_data"]) if isinstance(data["profile_data"], str) else data["profile_data"]
     except Exception:
-        return {}
-
+        pass
+    return {}
 
 def save_profile(user_id: str, profile: dict):
-    conn = get_db()
-    conn.execute(
-        "INSERT OR REPLACE INTO user_profile (user_id, profile_data) VALUES (?, ?)",
-        (user_id, json.dumps(profile, ensure_ascii=False))
-    )
-    conn.commit()
-    conn.close()
-
+    try:
+        sb().table("user_profile").upsert({
+            "user_id": user_id,
+            "profile_data": profile,
+            "updated_at": now_iso()
+        }).execute()
+    except Exception as e:
+        log.warning("save_profile error: %s", e)
 
 def extract_and_save_profile(user_id: str, message: str):
+    """Silently extract user info from message and update Supabase profile."""
     if not client:
         return
     profile = get_profile(user_id)
@@ -372,8 +122,8 @@ def extract_and_save_profile(user_id: str, message: str):
         f"Extract personal fitness info from this message.\n"
         f"Existing profile: {json.dumps(profile)}\n"
         f"Message: \"{message[:400]}\"\n"
-        f"Return ONLY a valid JSON object. Include all existing fields plus any new ones found. "
-        f"Return the same JSON unchanged if nothing new is found."
+        f"Return ONLY a valid JSON object with all fields merged. "
+        f"Return unchanged JSON if nothing new found."
     )
     try:
         res = client.chat.completions.create(
@@ -382,12 +132,15 @@ def extract_and_save_profile(user_id: str, message: str):
             max_tokens=300,
             temperature=0.1,
         )
-        updated = safe_json(res.choices[0].message.content)
+        text = res.choices[0].message.content.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text  = "\n".join(lines[1:-1])
+        updated = json.loads(text)
         if isinstance(updated, dict) and updated:
             save_profile(user_id, updated)
     except Exception:
         pass
-
 
 def build_memory_context(user_id: str) -> str:
     profile = get_profile(user_id)
@@ -399,173 +152,90 @@ def build_memory_context(user_id: str) -> str:
             lines.append(f"  · {k}: {v}")
     return "\n".join(lines)
 
-
-# ──────────────────────────────────────────────
-# Message history
-# ──────────────────────────────────────────────
-def get_history(user_id: str, page: str = None, limit: int = 30) -> list:
-    conn = get_db()
-    if page:
-        rows = conn.execute(
-            "SELECT role, content FROM messages WHERE user_id = ? AND page = ? ORDER BY id DESC LIMIT ?",
-            (user_id, page, limit)
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT role, content FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT ?",
-            (user_id, limit)
-        ).fetchall()
-    conn.close()
-    return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
-
+# ══════════════════════════════════════════════════════════════
+# CHAT HISTORY HELPERS
+# ══════════════════════════════════════════════════════════════
+def get_history(user_id: str, page: str = "chat", limit: int = 30) -> list:
+    try:
+        res = sb().table("messages")\
+            .select("role, content")\
+            .eq("user_id", user_id)\
+            .eq("page", page)\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .execute()
+        rows = res.data or []
+        return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+    except Exception as e:
+        log.warning("get_history error: %s", e)
+        return []
 
 def save_message(user_id: str, role: str, content: str, page: str = "chat"):
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO messages (user_id, role, content, page, created_at) VALUES (?, ?, ?, ?, ?)",
-        (user_id, role, content, page, now_iso())
-    )
-    conn.commit()
-    conn.close()
-
+    try:
+        sb().table("messages").insert({
+            "user_id":    user_id,
+            "role":       role,
+            "content":    content,
+            "page":       page,
+            "created_at": now_iso()
+        }).execute()
+    except Exception as e:
+        log.warning("save_message error: %s", e)
 
 # ══════════════════════════════════════════════════════════════
-# AUTH ENDPOINTS
+# ROOT
 # ══════════════════════════════════════════════════════════════
-
-def _maybe_limit(limit_str):
-    """Decorator helper that applies rate limit only if limiter exists."""
-    def decorator(fn):
-        if limiter:
-            return limiter.limit(limit_str)(fn)
-        return fn
-    return decorator
-
-
-@app.route("/auth/register", methods=["POST"])
-@_maybe_limit("5 per minute")
-def auth_register():
-    data     = request.json or {}
-    email    = (data.get("email") or "").strip().lower()
-    password = (data.get("password") or "")
-    name     = (data.get("name") or email.split("@")[0]).strip()
-    uid      = (data.get("uid") or "").strip()
-
-    if not email or not password:
-        return jsonify({"error": "Email and password are required."}), 400
-    if "@" not in email or "." not in email or len(email) > 200:
-        return jsonify({"error": "Please enter a valid email address."}), 400
-    if len(password) < 6:
-        return jsonify({"error": "Password must be at least 6 characters."}), 400
-    if len(name) > 100:
-        return jsonify({"error": "Name too long."}), 400
-
-    conn = get_db()
-    existing = conn.execute("SELECT user_id FROM users WHERE email = ?", (email,)).fetchone()
-    if existing:
-        conn.close()
-        return jsonify({"error": "An account with this email already exists. Please sign in."}), 409
-
-    if not uid:
-        uid = "e_" + secrets.token_hex(12)
-
-    conn.execute(
-        "INSERT INTO users (user_id, name, email, password_hash, provider, created_at, last_seen) "
-        "VALUES (?, ?, ?, ?, 'email', ?, ?)",
-        (uid, name, email, hash_password(password), now_iso(), now_iso())
-    )
-    conn.commit()
-    conn.close()
-    log.info("✅  Registered: %s (%s)", uid, email)
-    return jsonify({"uid": uid, "name": name, "email": email})
-
-
-@app.route("/auth/login", methods=["POST"])
-@_maybe_limit("10 per minute")
-def auth_login():
-    data     = request.json or {}
-    email    = (data.get("email") or "").strip().lower()
-    password = (data.get("password") or "")
-
-    if not email or not password:
-        return jsonify({"error": "Email and password are required."}), 400
-
-    conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-
-    if not user:
-        conn.close()
-        return jsonify({"error": "No account found with this email. Please register first."}), 401
-
-    if not verify_password(password, user["password_hash"]):
-        conn.close()
-        return jsonify({"error": "Incorrect password. Please try again."}), 401
-
-    # Upgrade legacy SHA-256 hashes to bcrypt
-    if HAS_BCRYPT and user["password_hash"] and not user["password_hash"].startswith("\$2"):
-        try:
-            new_hash = hash_password(password)
-            conn.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (new_hash, user["user_id"]))
-        except Exception:
-            pass
-
-    conn.execute("UPDATE users SET last_seen = ? WHERE user_id = ?", (now_iso(), user["user_id"]))
-    conn.commit()
-    conn.close()
-
-    log.info("✅  Login: %s", email)
+@app.route("/", methods=["GET"])
+def root():
     return jsonify({
-        "uid":     user["user_id"],
-        "name":    user["name"] or email.split("@")[0],
-        "email":   user["email"],
-        "picture": user["picture"],
+        "name":    "FITCORE.AI Backend",
+        "version": "4.0.0 — Supabase Only",
+        "status":  "running",
+        "db":      "supabase" if supabase else "not_configured",
+        "ai":      "configured" if client else "not_configured",
     })
 
+# ══════════════════════════════════════════════════════════════
+# HEALTH CHECK
+# ══════════════════════════════════════════════════════════════
+@app.route("/health", methods=["GET"])
+def health():
+    db_ok = False
+    ai_ok = client is not None
+    try:
+        sb().table("users").select("id").limit(1).execute()
+        db_ok = True
+    except Exception:
+        pass
 
-@app.route("/auth/google", methods=["POST"])
-def auth_google():
-    data  = request.json or {}
-    uid   = (data.get("uid") or data.get("user_id") or "").strip()
-    name  = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip().lower()
-    pic   = (data.get("picture") or "").strip()
-
-    if not uid:
-        return jsonify({"error": "Missing uid"}), 400
-
-    conn = get_db()
-    existing = conn.execute("SELECT user_id FROM users WHERE user_id = ?", (uid,)).fetchone()
-
-    if not existing:
-        if email:
-            by_email = conn.execute("SELECT user_id FROM users WHERE email = ?", (email,)).fetchone()
-            if by_email:
-                conn.execute(
-                    "UPDATE users SET provider='google', picture=?, last_seen=? WHERE email=?",
-                    (pic, now_iso(), email)
-                )
-                conn.commit(); conn.close()
-                return jsonify({"uid": by_email["user_id"], "name": name, "email": email, "picture": pic})
-
-        conn.execute(
-            "INSERT INTO users (user_id, name, email, provider, picture, created_at, last_seen) "
-            "VALUES (?, ?, ?, 'google', ?, ?, ?)",
-            (uid, name, email, pic, now_iso(), now_iso())
-        )
-        conn.commit()
-        log.info("✅  Google user: %s (%s)", uid, email)
-    else:
-        conn.execute("UPDATE users SET picture=?, last_seen=? WHERE user_id=?", (pic, now_iso(), uid))
-        conn.commit()
-
-    conn.close()
-    return jsonify({"uid": uid, "name": name, "email": email, "picture": pic})
-
+    status = "ok" if (db_ok and ai_ok) else "degraded"
+    return jsonify({
+        "status":  status,
+        "db":      "supabase_ok" if db_ok else "supabase_error",
+        "ai":      "ok" if ai_ok else "not_configured",
+        "version": "4.0.0",
+        "time":    now_iso(),
+    }), 200 if db_ok else 503
 
 # ══════════════════════════════════════════════════════════════
-# PROFILE
+# STATS
 # ══════════════════════════════════════════════════════════════
+@app.route("/stats", methods=["GET"])
+def stats():
+    result = {}
+    try:
+        result["total_users"]    = sb().table("users").select("id", count="exact").execute().count
+        result["total_messages"] = sb().table("messages").select("id", count="exact").execute().count
+        result["total_tasks"]    = sb().table("tasks").select("id", count="exact").execute().count
+        result["total_progress"] = sb().table("progress").select("id", count="exact").execute().count
+        result["total_plans"]    = sb().table("workout_plans").select("user_id", count="exact").execute().count
+    except Exception as e:
+        result["error"] = str(e)
+    return jsonify(result)
 
+# ══════════════════════════════════════════════════════════════
+# USER PROFILE
+# ══════════════════════════════════════════════════════════════
 @app.route("/profile/save", methods=["POST"])
 def profile_save():
     data    = request.json or {}
@@ -576,7 +246,6 @@ def profile_save():
     save_profile(user_id, profile)
     return jsonify({"status": "saved"})
 
-
 @app.route("/profile/load", methods=["GET"])
 def profile_load():
     user_id = request.args.get("user_id", "")
@@ -584,50 +253,72 @@ def profile_load():
         return jsonify({"error": "user_id required"}), 400
     return jsonify({"profile": get_profile(user_id)})
 
+# ══════════════════════════════════════════════════════════════
+# USER SYNC (called after Supabase login to upsert user record)
+# ══════════════════════════════════════════════════════════════
+@app.route("/user/sync", methods=["POST"])
+def user_sync():
+    """
+    Called by frontend after Supabase login to keep users table in sync.
+    Body: { user_id, name, email, picture, provider }
+    """
+    data    = request.json or {}
+    user_id = data.get("user_id", "")
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+    try:
+        sb().table("users").upsert({
+            "id":         user_id,
+            "name":       data.get("name", ""),
+            "email":      data.get("email", ""),
+            "picture":    data.get("picture", ""),
+            "provider":   data.get("provider", "email"),
+            "updated_at": now_iso()
+        }, on_conflict="id").execute()
+        log.info("User synced: %s", user_id)
+        return jsonify({"status": "synced"})
+    except Exception as e:
+        log.error("user_sync error: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 # ══════════════════════════════════════════════════════════════
-# CHAT (FIXED — system_override now appends instead of replacing)
+# CHAT
 # ══════════════════════════════════════════════════════════════
-
 @app.route("/chat", methods=["POST"])
-@_maybe_limit("30 per minute")
 def chat():
     data    = request.json or {}
     message = (data.get("message") or "").strip()
-    user_id = data.get("user_id", "default_user")
+    user_id = data.get("user_id", "anonymous")
     page    = data.get("page", "chat")
 
     if not message:
         return jsonify({"error": "Empty message"}), 400
-    if len(message) > 4000:
-        return jsonify({"error": "Message too long"}), 400
 
     if not client:
-        return jsonify({
-            "reply": "⚠️ AI service is not configured. Please set the GROQ_API_KEY environment variable on your Render backend."
-        }), 503
+        return jsonify({"reply": "⚠️ AI service not configured. Please set GROQ_API_KEY on Render."}), 503
 
-    get_or_create_user(user_id)
-
+    # Extract and save profile info (non-blocking)
     try:
         extract_and_save_profile(user_id, message)
     except Exception:
         pass
 
+    # Build system prompt with user memory from Supabase
     memory = build_memory_context(user_id)
-
-    # FIXED: system_override now AUGMENTS the base system prompt instead of replacing it.
-    # This preserves FITCORE personality while letting pages add mode-specific instructions.
     system = SYSTEM_PROMPT
-    system_override = (data.get("system_override") or "").strip()
-    if system_override:
-        system += f"\n\n--- MODE INSTRUCTION ---\n{system_override}"
     if memory:
         system += f"\n\n{memory}"
 
+    # Allow per-mode system override (mental.html modes)
+    system_override = (data.get("system_override") or "").strip()
+    if system_override:
+        system = system_override + (f"\n\n{memory}" if memory else "")
+
+    # Use client-provided history or load from Supabase
     client_history = data.get("history", [])
     history = client_history if client_history else get_history(user_id, page=page, limit=30)
 
+    # Save user message to Supabase
     save_message(user_id, "user", message, page)
 
     try:
@@ -643,41 +334,36 @@ def chat():
         )
         reply = response.choices[0].message.content
     except Exception as e:
-        log.error("Groq API error: %s", e)
-        return jsonify({
-            "error": "AI service temporarily unavailable",
-            "reply": "I'm having trouble reaching the AI service right now. Please wait a moment and try again."
-        }), 503
+        log.error("Groq error: %s", e)
+        return jsonify({"reply": "I'm having trouble reaching the AI right now. Please try again in a moment."}), 503
 
+    # Save assistant reply to Supabase
     save_message(user_id, "assistant", reply, page)
     return jsonify({"reply": reply})
 
-
 @app.route("/history", methods=["GET"])
 def history_endpoint():
-    user_id = request.args.get("user_id", "default_user")
-    page    = request.args.get("page", None)
+    user_id = request.args.get("user_id", "")
+    page    = request.args.get("page", "chat")
     return jsonify({"history": get_history(user_id, page=page, limit=100)})
-
 
 @app.route("/clear", methods=["POST"])
 def clear_history():
     data    = request.json or {}
-    user_id = data.get("user_id", "default_user")
+    user_id = data.get("user_id", "")
     page    = data.get("page", None)
-    conn    = get_db()
-    if page:
-        conn.execute("DELETE FROM messages WHERE user_id = ? AND page = ?", (user_id, page))
-    else:
-        conn.execute("DELETE FROM messages WHERE user_id = ?", (user_id,))
-    conn.commit(); conn.close()
-    return jsonify({"status": "cleared"})
-
+    try:
+        q = sb().table("messages").delete().eq("user_id", user_id)
+        if page:
+            q = q.eq("page", page)
+        q.execute()
+        return jsonify({"status": "cleared"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ══════════════════════════════════════════════════════════════
 # WORKOUT PLAN
 # ══════════════════════════════════════════════════════════════
-
 @app.route("/plan/save", methods=["POST"])
 def plan_save():
     data    = request.json or {}
@@ -689,167 +375,196 @@ def plan_save():
         return jsonify({"error": "user_id and plan required"}), 400
 
     now = now_iso()
-    conn = get_db()
-    existing = conn.execute("SELECT created_at FROM workout_plans WHERE user_id = ?", (user_id,)).fetchone()
-    created = existing["created_at"] if existing else now
+    try:
+        # Check if plan already exists to preserve created_at
+        existing = sb().table("workout_plans").select("created_at").eq("user_id", user_id).execute()
+        created  = existing.data[0]["created_at"] if existing.data else now
 
-    conn.execute(
-        "INSERT OR REPLACE INTO workout_plans (user_id, plan_json, raw_text, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (user_id, json.dumps(plan, ensure_ascii=False), raw, created, now)
-    )
-    conn.commit(); conn.close()
-    log.info("📋  Plan saved for %s (%d days)", user_id, len(plan))
-    return jsonify({"status": "saved", "days": list(plan.keys()), "updated_at": now})
+        sb().table("workout_plans").upsert({
+            "user_id":    user_id,
+            "plan_json":  plan,
+            "raw_text":   raw,
+            "created_at": created,
+            "updated_at": now,
+        }, on_conflict="user_id").execute()
 
+        log.info("Plan saved for %s (%d days)", user_id, len(plan))
+        return jsonify({"status": "saved", "days": list(plan.keys()), "updated_at": now})
+    except Exception as e:
+        log.error("plan_save error: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/plan/load", methods=["GET"])
 def plan_load():
     user_id = request.args.get("user_id", "")
     if not user_id:
         return jsonify({"error": "user_id required"}), 400
-
-    conn = get_db()
-    row  = conn.execute(
-        "SELECT plan_json, raw_text, created_at, updated_at FROM workout_plans WHERE user_id = ?",
-        (user_id,)
-    ).fetchone()
-    conn.close()
-
-    if not row:
-        return jsonify({"plan": None, "raw": None, "created_at": None, "updated_at": None})
-
     try:
-        plan = json.loads(row["plan_json"])
-    except Exception:
-        plan = {}
-
-    return jsonify({
-        "plan":       plan,
-        "raw":        row["raw_text"],
-        "created_at": row["created_at"],
-        "updated_at": row["updated_at"],
-    })
-
+        res = sb().table("workout_plans").select("*").eq("user_id", user_id).execute()
+        if not res.data:
+            return jsonify({"plan": None, "raw": None, "created_at": None})
+        row = res.data[0]
+        return jsonify({
+            "plan":       row.get("plan_json"),
+            "raw":        row.get("raw_text"),
+            "created_at": row.get("created_at"),
+            "updated_at": row.get("updated_at"),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ══════════════════════════════════════════════════════════════
 # TASKS
 # ══════════════════════════════════════════════════════════════
-
 @app.route("/tasks", methods=["POST"])
 def save_tasks():
     data    = request.json or {}
-    user_id = data.get("user_id", "default_user")
+    user_id = data.get("user_id", "")
     tasks   = data.get("tasks", [])
     date    = data.get("date", today_str())
     week    = get_week_number(date)
 
-    get_or_create_user(user_id)
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
 
-    conn = get_db()
-    conn.execute("DELETE FROM tasks WHERE user_id = ? AND date = ?", (user_id, date))
-    inserted = 0
-    for t in tasks:
-        text = (t.get("task_text") or "").strip()[:500]
-        if not text:
-            continue
-        try:
-            conn.execute(
-                "INSERT OR IGNORE INTO tasks (user_id, task_text, completed, date, week_number, day_type, badge) "
-                "VALUES (?, ?, 0, ?, ?, ?, ?)",
-                (user_id, text, date, week, t.get("day_type", "general"), t.get("badge", "workout"))
-            )
-            inserted += 1
-        except Exception:
-            pass
+    try:
+        # Delete today's tasks first (clean slate on plan regenerate)
+        sb().table("tasks").delete()\
+            .eq("user_id", user_id)\
+            .eq("date", date)\
+            .execute()
 
-    conn.commit(); conn.close()
-    return jsonify({"status": "saved", "count": inserted, "date": date, "week": week})
+        rows = []
+        for t in tasks:
+            text = (t.get("task_text") or "").strip()
+            if text:
+                rows.append({
+                    "user_id":     user_id,
+                    "task_text":   text,
+                    "completed":   False,
+                    "date":        date,
+                    "week_number": week,
+                    "day_type":    t.get("day_type", "general"),
+                    "badge":       t.get("badge", "workout"),
+                    "created_at":  now_iso(),
+                })
 
+        if rows:
+            sb().table("tasks").insert(rows).execute()
+
+        return jsonify({"status": "saved", "count": len(rows), "date": date, "week": week})
+    except Exception as e:
+        log.error("save_tasks error: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
-    user_id = request.args.get("user_id", "default_user")
+    user_id = request.args.get("user_id", "")
     date    = request.args.get("date", today_str())
-
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT id, task_text, completed, date, week_number, day_type, badge FROM tasks "
-        "WHERE user_id = ? AND date = ? ORDER BY id ASC",
-        (user_id, date)
-    ).fetchall()
-    conn.close()
-    return jsonify({"tasks": [dict(r) for r in rows], "date": date})
-
+    try:
+        res = sb().table("tasks").select("*")\
+            .eq("user_id", user_id)\
+            .eq("date", date)\
+            .order("created_at")\
+            .execute()
+        return jsonify({"tasks": res.data or [], "date": date})
+    except Exception as e:
+        return jsonify({"error": str(e), "tasks": [], "date": date}), 500
 
 @app.route("/tasks/update", methods=["POST"])
 def update_task():
     data      = request.json or {}
-    user_id   = data.get("user_id", "default_user")
+    user_id   = data.get("user_id", "")
     task_id   = data.get("task_id")
-    completed = 1 if data.get("completed") else 0
+    completed = bool(data.get("completed"))
 
     if not task_id:
         return jsonify({"error": "task_id required"}), 400
 
-    conn = get_db()
-    task = conn.execute("SELECT date FROM tasks WHERE id = ? AND user_id = ?", (task_id, user_id)).fetchone()
+    try:
+        # Verify task belongs to user
+        check = sb().table("tasks").select("id, date")\
+            .eq("id", task_id)\
+            .eq("user_id", user_id)\
+            .execute()
 
-    if not task:
-        conn.close()
-        return jsonify({"error": "Task not found"}), 404
+        if not check.data:
+            return jsonify({"error": "Task not found"}), 404
 
-    cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    if task["date"] < cutoff:
-        conn.close()
-        return jsonify({"error": "Cannot edit tasks older than 7 days"}), 403
+        sb().table("tasks")\
+            .update({"completed": completed})\
+            .eq("id", task_id)\
+            .eq("user_id", user_id)\
+            .execute()
 
-    conn.execute("UPDATE tasks SET completed = ? WHERE id = ? AND user_id = ?", (completed, task_id, user_id))
-    conn.commit(); conn.close()
-    return jsonify({"status": "updated", "completed": completed})
-
+        return jsonify({"status": "updated", "completed": completed})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/tasks/history", methods=["GET"])
 def tasks_history():
-    user_id = request.args.get("user_id", "default_user")
-    conn    = get_db()
+    user_id = request.args.get("user_id", "")
+    try:
+        res = sb().table("tasks").select("*")\
+            .eq("user_id", user_id)\
+            .order("date")\
+            .execute()
 
-    by_date = conn.execute("""
-        SELECT date, COUNT(*) AS total, SUM(completed) AS done,
-               ROUND(100.0 * SUM(completed) / MAX(COUNT(*), 1), 1) AS pct
-        FROM tasks WHERE user_id = ? GROUP BY date ORDER BY date ASC LIMIT 90
-    """, (user_id,)).fetchall()
+        rows = res.data or []
 
-    by_week = conn.execute("""
-        SELECT week_number, ROUND(100.0 * SUM(completed) / MAX(COUNT(*), 1), 1) AS pct
-        FROM tasks WHERE user_id = ? GROUP BY week_number ORDER BY week_number ASC
-    """, (user_id,)).fetchall()
+        # ── by_date ──────────────────────────────────────────
+        date_map = {}
+        for r in rows:
+            d = r["date"]
+            if d not in date_map:
+                date_map[d] = {"date": d, "total": 0, "done": 0}
+            date_map[d]["total"] += 1
+            if r["completed"]:
+                date_map[d]["done"] += 1
+        by_date = []
+        for d in sorted(date_map.keys()):
+            entry = date_map[d]
+            pct   = round(100 * entry["done"] / entry["total"], 1) if entry["total"] else 0
+            by_date.append({"date": d, "total": entry["total"], "done": entry["done"], "pct": pct})
 
-    by_day_type = conn.execute("""
-        SELECT day_type, ROUND(100.0 * SUM(completed) / MAX(COUNT(*), 1), 1) AS pct,
-               COUNT(*) AS total_tasks
-        FROM tasks WHERE user_id = ? GROUP BY day_type ORDER BY pct DESC
-    """, (user_id,)).fetchall()
+        # ── by_day_type ───────────────────────────────────────
+        dtype_map = {}
+        for r in rows:
+            dt = r.get("day_type", "general")
+            if dt not in dtype_map:
+                dtype_map[dt] = {"day_type": dt, "total": 0, "done": 0}
+            dtype_map[dt]["total"] += 1
+            if r["completed"]:
+                dtype_map[dt]["done"] += 1
+        by_day_type = []
+        for dt, entry in dtype_map.items():
+            pct = round(100 * entry["done"] / entry["total"], 1) if entry["total"] else 0
+            by_day_type.append({"day_type": dt, "pct": pct, "total_tasks": entry["total"]})
 
-    weekly_days = conn.execute("""
-        SELECT date, day_type, week_number, COUNT(*) AS total, SUM(completed) AS done
-        FROM tasks WHERE user_id = ? GROUP BY date, day_type, week_number
-        ORDER BY date ASC LIMIT 90
-    """, (user_id,)).fetchall()
+        # ── weekly_days ───────────────────────────────────────
+        weekly_map = {}
+        for r in rows:
+            key = r["date"]
+            if key not in weekly_map:
+                weekly_map[key] = {"date": r["date"], "day_type": r.get("day_type", "general"), "week_number": r.get("week_number", 0), "total": 0, "done": 0}
+            weekly_map[key]["total"] += 1
+            if r["completed"]:
+                weekly_map[key]["done"] += 1
+        weekly_days = sorted(weekly_map.values(), key=lambda x: x["date"])
 
-    conn.close()
-    return jsonify({
-        "by_date":     [dict(r) for r in by_date],
-        "by_week":     [dict(r) for r in by_week],
-        "by_day_type": [dict(r) for r in by_day_type],
-        "weekly_days": [dict(r) for r in weekly_days],
-    })
-
+        return jsonify({
+            "by_date":     by_date,
+            "by_day_type": by_day_type,
+            "weekly_days": weekly_days,
+        })
+    except Exception as e:
+        log.error("tasks_history error: %s", e)
+        return jsonify({"by_date": [], "by_day_type": [], "weekly_days": []}), 500
 
 @app.route("/tasks/ai-feedback", methods=["POST"])
 def tasks_ai_feedback():
     data           = request.json or {}
-    user_id        = data.get("user_id", "default_user")
+    user_id        = data.get("user_id", "")
     completion_pct = data.get("completion_pct", 0)
     day_type       = data.get("day_type", "workout")
     tasks_done     = data.get("tasks_done", [])
@@ -859,16 +574,15 @@ def tasks_ai_feedback():
     name    = profile.get("name", "")
 
     prompt = (
-        f"The user{f' ({name})' if name else ''} just finished their {day_type} day.\n"
+        f"The user{f' ({name})' if name else ''} finished their {day_type} day.\n"
         f"Completion: {completion_pct}%\n"
-        f"Completed: {', '.join(tasks_done[:10]) if tasks_done else 'none'}\n"
+        f"Done: {', '.join(tasks_done[:10]) if tasks_done else 'none'}\n"
         f"Missed: {', '.join(tasks_missed[:5]) if tasks_missed else 'none'}\n\n"
-        "Write 2–3 sentences of honest, specific, energising feedback. "
-        "If 100%, celebrate genuinely. If <70%, encourage without sugarcoating. "
-        "Reference the day type and completion rate. Be direct and motivating."
+        "Give 2–3 sentences of honest, specific, energising feedback. "
+        "If 100% celebrate. If <70% encourage without sugarcoating. Be direct."
     )
 
-    fallback = "Great effort today! Every session completed is progress compounding. Stay consistent and the results will follow. 💪"
+    fallback = "Great effort today! Consistency is the key to results. Keep showing up 💪"
 
     if not client:
         return jsonify({"feedback": fallback})
@@ -883,315 +597,248 @@ def tasks_ai_feedback():
             max_tokens=250,
             temperature=0.8,
         )
-        feedback = res.choices[0].message.content
+        return jsonify({"feedback": res.choices[0].message.content})
     except Exception:
-        feedback = fallback
-
-    return jsonify({"feedback": feedback})
-
+        return jsonify({"feedback": fallback})
 
 # ══════════════════════════════════════════════════════════════
-# PROGRESS
+# PROGRESS (WEIGHT LOG)
 # ══════════════════════════════════════════════════════════════
-
 @app.route("/progress", methods=["POST"])
 def save_progress():
     data         = request.json or {}
-    user_id      = data.get("user_id", "default_user")
+    user_id      = data.get("user_id", "")
     weight       = data.get("weight")
-    workout_done = 1 if data.get("workout_done") else 0
+    workout_done = bool(data.get("workout_done"))
     date         = data.get("date", today_str())
 
-    # Validate weight
-    if weight is not None:
-        try:
-            weight = float(weight)
-            if weight < 20 or weight > 400:
-                return jsonify({"error": "Invalid weight (must be 20-400 kg)"}), 400
-        except (TypeError, ValueError):
-            return jsonify({"error": "Weight must be a number"}), 400
-
-    get_or_create_user(user_id)
-
-    conn = get_db()
-    conn.execute(
-        "INSERT OR REPLACE INTO progress (user_id, weight, workout_done, date) VALUES (?, ?, ?, ?)",
-        (user_id, weight, workout_done, date)
-    )
-    conn.commit()
-    count = conn.execute("SELECT COUNT(*) AS c FROM progress WHERE user_id = ?", (user_id,)).fetchone()["c"]
-    conn.close()
-    return jsonify({"status": "saved", "date": date, "total_entries": count})
-
+    try:
+        sb().table("progress").upsert({
+            "user_id":      user_id,
+            "weight":       weight,
+            "workout_done": workout_done,
+            "date":         date,
+        }, on_conflict="user_id,date").execute()
+        return jsonify({"status": "saved", "date": date})
+    except Exception as e:
+        log.error("save_progress error: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/progress", methods=["GET"])
 def get_progress():
-    user_id = request.args.get("user_id", "default_user")
+    user_id = request.args.get("user_id", "")
     limit   = min(int(request.args.get("limit", 90)), 365)
-    conn    = get_db()
-    rows    = conn.execute(
-        "SELECT weight, workout_done, date FROM progress WHERE user_id = ? ORDER BY date ASC LIMIT ?",
-        (user_id, limit)
-    ).fetchall()
-    conn.close()
-    return jsonify({"progress": [dict(r) for r in rows]})
-
+    try:
+        res = sb().table("progress").select("weight, workout_done, date")\
+            .eq("user_id", user_id)\
+            .order("date")\
+            .limit(limit)\
+            .execute()
+        return jsonify({"progress": res.data or []})
+    except Exception as e:
+        return jsonify({"error": str(e), "progress": []}), 500
 
 # ══════════════════════════════════════════════════════════════
-# MOOD / JOURNAL / FOOD / MACROS / WATER
+# MOOD LOG
 # ══════════════════════════════════════════════════════════════
-
 @app.route("/mood", methods=["POST"])
 def save_mood():
     data    = request.json or {}
-    user_id = data.get("user_id", "default_user")
+    user_id = data.get("user_id", "")
     score   = data.get("score")
-    emoji   = data.get("emoji", "")
-    label   = data.get("label", "")
-    note    = (data.get("note") or "")[:1000]
     date    = data.get("date", today_str())
 
     if score is None:
         return jsonify({"error": "score required"}), 400
+
     try:
-        score = int(score)
-        if score < 1 or score > 5:
-            return jsonify({"error": "score must be 1-5"}), 400
-    except (TypeError, ValueError):
-        return jsonify({"error": "invalid score"}), 400
-
-    get_or_create_user(user_id)
-    conn = get_db()
-    conn.execute(
-        "INSERT OR REPLACE INTO mood_log (user_id, date, score, emoji, label, note) VALUES (?, ?, ?, ?, ?, ?)",
-        (user_id, date, score, emoji, label, note)
-    )
-    conn.commit(); conn.close()
-    return jsonify({"status": "saved", "date": date})
-
+        sb().table("mood_log").upsert({
+            "user_id":    user_id,
+            "date":       date,
+            "score":      score,
+            "emoji":      data.get("emoji", ""),
+            "label":      data.get("label", ""),
+            "note":       data.get("note", ""),
+        }, on_conflict="user_id,date").execute()
+        return jsonify({"status": "saved", "date": date})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/mood", methods=["GET"])
 def get_mood():
-    user_id = request.args.get("user_id", "default_user")
+    user_id = request.args.get("user_id", "")
     limit   = int(request.args.get("limit", 30))
-    conn    = get_db()
-    rows    = conn.execute(
-        "SELECT * FROM mood_log WHERE user_id = ? ORDER BY date DESC LIMIT ?",
-        (user_id, limit)
-    ).fetchall()
-    conn.close()
-    return jsonify({"mood_log": [dict(r) for r in rows]})
+    try:
+        res = sb().table("mood_log").select("*")\
+            .eq("user_id", user_id)\
+            .order("date", desc=True)\
+            .limit(limit)\
+            .execute()
+        return jsonify({"mood_log": res.data or []})
+    except Exception as e:
+        return jsonify({"error": str(e), "mood_log": []}), 500
 
-
+# ══════════════════════════════════════════════════════════════
+# JOURNAL
+# ══════════════════════════════════════════════════════════════
 @app.route("/journal", methods=["POST"])
 def save_journal():
     data    = request.json or {}
-    user_id = data.get("user_id", "default_user")
-    text    = (data.get("text") or "").strip()[:5000]
-    mood    = data.get("mood", "")
+    user_id = data.get("user_id", "")
+    text    = (data.get("text") or "").strip()
     date    = data.get("date", today_str())
 
     if not text:
         return jsonify({"error": "text required"}), 400
 
-    get_or_create_user(user_id)
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO journal (user_id, date, text, mood) VALUES (?, ?, ?, ?)",
-        (user_id, date, text, mood)
-    )
-    conn.commit(); conn.close()
-    return jsonify({"status": "saved", "date": date})
-
+    try:
+        sb().table("journal").insert({
+            "user_id":    user_id,
+            "date":       date,
+            "text":       text,
+            "mood":       data.get("mood", ""),
+            "created_at": now_iso(),
+        }).execute()
+        return jsonify({"status": "saved", "date": date})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/journal", methods=["GET"])
 def get_journal():
-    user_id = request.args.get("user_id", "default_user")
+    user_id = request.args.get("user_id", "")
     limit   = int(request.args.get("limit", 20))
-    conn    = get_db()
-    rows    = conn.execute(
-        "SELECT * FROM journal WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
-        (user_id, limit)
-    ).fetchall()
-    conn.close()
-    return jsonify({"entries": [dict(r) for r in rows]})
+    try:
+        res = sb().table("journal").select("*")\
+            .eq("user_id", user_id)\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .execute()
+        return jsonify({"entries": res.data or []})
+    except Exception as e:
+        return jsonify({"error": str(e), "entries": []}), 500
 
-
+# ══════════════════════════════════════════════════════════════
+# FOOD LOG
+# ══════════════════════════════════════════════════════════════
 @app.route("/food", methods=["POST"])
 def save_food():
     data    = request.json or {}
-    user_id = data.get("user_id", "default_user")
+    user_id = data.get("user_id", "")
     items   = data.get("items", [])
     date    = data.get("date", today_str())
 
     if not items:
         return jsonify({"error": "items required"}), 400
 
-    get_or_create_user(user_id)
-    conn = get_db()
-    inserted = 0
-    for item in items:
-        name = (item.get("name") or "").strip()[:200]
-        if not name:
-            continue
-        try:
-            cals    = max(0, min(10000, float(item.get("cals", 0) or 0)))
-            protein = max(0, min(1000, float(item.get("protein", 0) or 0)))
-            carbs   = max(0, min(1000, float(item.get("carbs", 0) or 0)))
-            fat     = max(0, min(1000, float(item.get("fat", 0) or 0)))
-        except (TypeError, ValueError):
-            continue
-        conn.execute(
-            "INSERT INTO food_log (user_id, date, name, cals, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (user_id, date, name, cals, protein, carbs, fat)
-        )
-        inserted += 1
-    conn.commit(); conn.close()
-    return jsonify({"status": "saved", "count": inserted, "date": date})
-
+    try:
+        rows = []
+        for item in items:
+            name = (item.get("name") or "").strip()
+            if name:
+                rows.append({
+                    "user_id":    user_id,
+                    "date":       date,
+                    "name":       name,
+                    "cals":       item.get("cals", 0),
+                    "protein":    item.get("protein", 0),
+                    "carbs":      item.get("carbs", 0),
+                    "fat":        item.get("fat", 0),
+                    "created_at": now_iso(),
+                })
+        if rows:
+            sb().table("food_log").insert(rows).execute()
+        return jsonify({"status": "saved", "count": len(rows), "date": date})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/food", methods=["GET"])
 def get_food():
-    user_id = request.args.get("user_id", "default_user")
+    user_id = request.args.get("user_id", "")
     date    = request.args.get("date", today_str())
-    conn    = get_db()
-    rows    = conn.execute(
-        "SELECT * FROM food_log WHERE user_id = ? AND date = ? ORDER BY created_at ASC",
-        (user_id, date)
-    ).fetchall()
-    conn.close()
-    return jsonify({"items": [dict(r) for r in rows], "date": date})
+    try:
+        res = sb().table("food_log").select("*")\
+            .eq("user_id", user_id)\
+            .eq("date", date)\
+            .order("created_at")\
+            .execute()
+        return jsonify({"items": res.data or [], "date": date})
+    except Exception as e:
+        return jsonify({"error": str(e), "items": [], "date": date}), 500
 
-
-@app.route("/food/<int:item_id>", methods=["DELETE"])
+@app.route("/food/<item_id>", methods=["DELETE"])
 def delete_food(item_id):
-    user_id = request.args.get("user_id", "default_user")
-    conn    = get_db()
-    conn.execute("DELETE FROM food_log WHERE id = ? AND user_id = ?", (item_id, user_id))
-    conn.commit(); conn.close()
-    return jsonify({"status": "deleted"})
+    user_id = request.args.get("user_id", "")
+    try:
+        sb().table("food_log").delete()\
+            .eq("id", item_id)\
+            .eq("user_id", user_id)\
+            .execute()
+        return jsonify({"status": "deleted"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-
+# ══════════════════════════════════════════════════════════════
+# MACRO TARGETS
+# ══════════════════════════════════════════════════════════════
 @app.route("/macros", methods=["POST"])
 def save_macros():
-    data     = request.json or {}
-    user_id  = data.get("user_id", "default_user")
-    calories = data.get("calories")
-    protein  = data.get("protein")
-    carbs    = data.get("carbs")
-    fat      = data.get("fat")
-    goal     = data.get("goal", "maintain")
-
-    get_or_create_user(user_id)
-    conn = get_db()
-    conn.execute(
-        "INSERT OR REPLACE INTO macro_targets (user_id, calories, protein, carbs, fat, goal, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (user_id, calories, protein, carbs, fat, goal, now_iso())
-    )
-    conn.commit(); conn.close()
-    return jsonify({"status": "saved"})
-
+    data    = request.json or {}
+    user_id = data.get("user_id", "")
+    try:
+        sb().table("macro_targets").upsert({
+            "user_id":    user_id,
+            "calories":   data.get("calories"),
+            "protein":    data.get("protein"),
+            "carbs":      data.get("carbs"),
+            "fat":        data.get("fat"),
+            "goal":       data.get("goal", "maintain"),
+            "updated_at": now_iso(),
+        }, on_conflict="user_id").execute()
+        return jsonify({"status": "saved"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/macros", methods=["GET"])
 def get_macros():
-    user_id = request.args.get("user_id", "default_user")
-    conn    = get_db()
-    row     = conn.execute("SELECT * FROM macro_targets WHERE user_id = ?", (user_id,)).fetchone()
-    conn.close()
-    return jsonify({"targets": dict(row) if row else None})
+    user_id = request.args.get("user_id", "")
+    try:
+        res = sb().table("macro_targets").select("*").eq("user_id", user_id).execute()
+        return jsonify({"targets": res.data[0] if res.data else None})
+    except Exception as e:
+        return jsonify({"error": str(e), "targets": None}), 500
 
-
+# ══════════════════════════════════════════════════════════════
+# WATER LOG
+# ══════════════════════════════════════════════════════════════
 @app.route("/water", methods=["POST"])
 def save_water():
     data    = request.json or {}
-    user_id = data.get("user_id", "default_user")
-    cups    = max(0, min(50, int(data.get("cups", 0) or 0)))
+    user_id = data.get("user_id", "")
+    cups    = int(data.get("cups", 0))
     date    = data.get("date", today_str())
-
-    get_or_create_user(user_id)
-    conn = get_db()
-    conn.execute(
-        "INSERT OR REPLACE INTO water_log (user_id, date, cups) VALUES (?, ?, ?)",
-        (user_id, date, cups)
-    )
-    conn.commit(); conn.close()
-    return jsonify({"status": "saved", "cups": cups, "date": date})
-
+    try:
+        sb().table("water_log").upsert({
+            "user_id": user_id,
+            "date":    date,
+            "cups":    cups,
+        }, on_conflict="user_id,date").execute()
+        return jsonify({"status": "saved", "cups": cups, "date": date})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/water", methods=["GET"])
 def get_water():
-    user_id = request.args.get("user_id", "default_user")
-    date    = request.args.get("date", today_str())
-    conn    = get_db()
-    row     = conn.execute(
-        "SELECT cups FROM water_log WHERE user_id = ? AND date = ?",
-        (user_id, date)
-    ).fetchone()
-    conn.close()
-    return jsonify({"cups": row["cups"] if row else 0, "date": date})
-
-
-# ══════════════════════════════════════════════════════════════
-# HEALTH & DIAGNOSTICS
-# ══════════════════════════════════════════════════════════════
-
-@app.route("/health", methods=["GET"])
-def health():
-    db_ok = False
-    ai_ok = client is not None
-    try:
-        conn = get_db()
-        conn.execute("SELECT 1").fetchone()
-        conn.close()
-        db_ok = True
-    except Exception:
-        pass
-
-    status = "ok" if (db_ok and ai_ok) else ("degraded" if db_ok else "error")
-    return jsonify({
-        "status":   status,
-        "db":       "ok" if db_ok else "error",
-        "ai":       "ok" if ai_ok else "not_configured",
-        "bcrypt":   HAS_BCRYPT,
-        "limiter":  HAS_LIMITER,
-        "version":  "3.1.0",
-        "time":     now_iso(),
-    }), 200 if db_ok else 503
-
-
-@app.route("/stats", methods=["GET"])
-def stats():
     user_id = request.args.get("user_id", "")
-    conn    = get_db()
-    result  = {
-        "total_users":    conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"],
-        "total_messages": conn.execute("SELECT COUNT(*) AS c FROM messages").fetchone()["c"],
-        "total_tasks":    conn.execute("SELECT COUNT(*) AS c FROM tasks").fetchone()["c"],
-        "total_progress": conn.execute("SELECT COUNT(*) AS c FROM progress").fetchone()["c"],
-        "total_plans":    conn.execute("SELECT COUNT(*) AS c FROM workout_plans").fetchone()["c"],
-    }
-    if user_id:
-        result["user"] = {
-            "messages": conn.execute("SELECT COUNT(*) AS c FROM messages WHERE user_id=?", (user_id,)).fetchone()["c"],
-            "tasks":    conn.execute("SELECT COUNT(*) AS c FROM tasks WHERE user_id=?",    (user_id,)).fetchone()["c"],
-            "progress": conn.execute("SELECT COUNT(*) AS c FROM progress WHERE user_id=?", (user_id,)).fetchone()["c"],
-        }
-    conn.close()
-    return jsonify(result)
-
-
-@app.route("/", methods=["GET"])
-def root():
-    return jsonify({
-        "name":    "FITCORE.AI Backend",
-        "version": "3.1.0",
-        "status":  "running",
-        "ai":      "configured" if client else "not_configured — set GROQ_API_KEY",
-        "bcrypt":  HAS_BCRYPT,
-        "limiter": HAS_LIMITER,
-    })
-
+    date    = request.args.get("date", today_str())
+    try:
+        res = sb().table("water_log").select("cups")\
+            .eq("user_id", user_id)\
+            .eq("date", date)\
+            .execute()
+        cups = res.data[0]["cups"] if res.data else 0
+        return jsonify({"cups": cups, "date": date})
+    except Exception as e:
+        return jsonify({"error": str(e), "cups": 0, "date": date}), 500
 
 # ══════════════════════════════════════════════════════════════
 # ENTRY POINT
@@ -1199,8 +846,7 @@ def root():
 if __name__ == "__main__":
     port  = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("DEBUG", "false").lower() == "true"
-    log.info("🚀  FITCORE.AI Backend v3.1 starting on port %d", port)
-    log.info("🤖  AI: %s", "configured" if client else "NOT CONFIGURED — set GROQ_API_KEY")
-    log.info("🔐  bcrypt: %s | rate limiter: %s", HAS_BCRYPT, HAS_LIMITER)
-    log.info("🗄️   DB: %s", DB_FILE)
+    log.info("🚀  FITCORE.AI Backend v4.0 (Supabase Only) — port %d", port)
+    log.info("🗄️   DB: %s", "Supabase connected" if supabase else "NOT CONFIGURED")
+    log.info("🤖  AI: %s", "Groq configured" if client else "NOT CONFIGURED")
     app.run(host="0.0.0.0", port=port, debug=debug)
