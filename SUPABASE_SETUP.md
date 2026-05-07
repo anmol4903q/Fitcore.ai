@@ -1,8 +1,8 @@
 # FITCORE.AI — Supabase Setup Guide
-# =============================================
+# =========================================
 # Supabase is 100% FREE for this project.
 # Free tier includes: 500MB DB, 2GB bandwidth, unlimited auth users
-# =============================================
+# =========================================
 
 ## STEP 1 — Create a Supabase Project
 1. Go to https://app.supabase.com
