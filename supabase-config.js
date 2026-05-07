@@ -3,7 +3,7 @@
 // Shared across all pages — include this before any page script
 // ═══════════════════════════════════════════════════════════
 
-// ── SUPABASE SETUP ───────────────────────────────────────────
+// ── SUPABASE SETUP ────
 const SUPABASE_URL    = 'https://eswkbttcgeqbuuadxnbg.supabase.co';
 const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzd2tidHRjZ2VxYnV1YWR4bmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxOTcwMTYsImV4cCI6MjA5Mjc3MzAxNn0.ujQh3jK2EMUAiO3s28Edh7mdl45KYuQ1-3TpnaPJXKY';
 
