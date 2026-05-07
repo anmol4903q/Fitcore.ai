@@ -198,7 +198,6 @@ And add this at the TOP of the <script> section on each page:
   // ... rest of your page init
 })();
 ```
-
 ## FREE TIER LIMITS (Supabase)
 - Database: 500MB (more than enough)
 - Auth users: Unlimited
