@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITCORE.AI — Set Up Your Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<style>
+:root {
+  --blue-deep:#0047CC; --blue-mid:#0066FF; --blue-bright:#2D8EFF;
+  --blue-soft:#E8F1FF; --cyan:#00C8FF; --cyan-soft:#E0F8FF;
+  --lime:#39E07A; --lime-dark:#28C063; --lime-soft:#E8FFF2;
+  --bg:#F4F7FF; --surface:#FFFFFF; --surface3:#EEF3FF;
+  --border:rgba(0,102,255,0.12); --border-mid:rgba(0,102,255,0.22);
+  --text:#0D1628; --text-muted:#4A5C7A; --text-dim:#8A9EC0;
+  --green:#28C063; --green-soft:#E8FFF2; --red:#E53E3E; --amber:#E8A13A;
+  --font-display:'Bebas Neue',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --radius:14px; --radius-sm:9px;
+  --shadow-sm:0 2px 8px rgba(0,102,255,0.08);
+  --shadow-md:0 4px 20px rgba(0,102,255,0.12);
+  --shadow-lg:0 8px 40px rgba(0,102,255,0.16);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{height:100%;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-body);
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,102,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,102,255,0.03) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp  {from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn  {from{opacity:0}to{opacity:1}}
+@keyframes pulse   {0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+@keyframes spin    {to{transform:rotate(360deg)}}
+@keyframes stepIn  {from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
+@keyframes stepOut {from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-32px)}}
+@keyframes checkPop{0%{transform:scale(0)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes progressFill{from{width:0}to{width:var(--target-w)}}
+@keyframes toastIn {from{opacity:0;transform:translateY(14px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes confetti{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(-120px) rotate(720deg);opacity:0}}
+
+/* ── HEADER ── */
+header{
+  position:relative;z-index:50;flex-shrink:0;
+  height:54px;display:flex;align-items:center;
+  gap:14px;padding:0 24px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow-sm);
+}
+.logo-wrap{display:flex;align-items:center;gap:9px;text-decoration:none;}
+.logo-img-box{width:32px;height:32px;border-radius:9px;overflow:hidden;box-shadow:0 2px 10px rgba(0,102,255,0.2);flex-shrink:0;}
+.logo-img-box img{width:100%;height:100%;object-fit:contain;}
+.logo-fallback{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--blue-mid),var(--cyan));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-fallback svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;}
+.logo-text{font-family:var(--font-display);font-size:22px;letter-spacing:3px;color:var(--text);line-height:1;}
+.logo-text em{color:var(--blue-mid);font-style:normal;}
+.logo-dot{display:inline-block;width:5px;height:5px;background:var(--lime);border-radius:50%;margin-left:2px;vertical-align:super;animation:pulse 2.4s ease-in-out infinite;}
+.header-tag{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);border-radius:20px;}
+
+/* ── MAIN CONTAINER ── */
+.setup-container{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;
+  padding:32px 20px 48px;
+  position:relative;z-index:10;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap{
+  width:100%;max-width:560px;
+  margin-bottom:32px;
+}
+.progress-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:10px;
+}
+.progress-title{
+  font-family:var(--font-display);font-size:13px;letter-spacing:2px;
+  color:var(--text-dim);text-transform:uppercase;
+}
+.progress-fraction{
+  font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+}
+.progress-track{
+  height:5px;background:var(--border);border-radius:3px;overflow:hidden;
+}
+.progress-fill{
+  height:100%;background:linear-gradient(90deg,var(--blue-mid),var(--cyan));
+  border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1);
+}
+
+/* Step dots */
+.step-dots{
+  display:flex;gap:8px;margin-top:10px;justify-content:center;
+}
+.step-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--border-mid);transition:all .3s;
+}
+.step-dot.done{background:var(--lime);}
+.step-dot.active{background:var(--blue-mid);transform:scale(1.3);}
+
+/* ── STEP CARD ── */
+.step-card{
+  width:100%;max-width:560px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:36px;
+  box-shadow:var(--shadow-md);
+  animation:fadeUp .35s ease;
+}
+
+.step-eyebrow{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:2px;
+  color:var(--blue-mid);text-transform:uppercase;margin-bottom:8px;
+}
+.step-title{
+  font-family:var(--font-display);font-size:28px;letter-spacing:2px;
+  color:var(--text);margin-bottom:6px;line-height:1.1;
+}
+.step-title em{color:var(--blue-mid);font-style:normal;}
+.step-sub{
+  font-size:14px;color:var(--text-muted);line-height:1.6;
+  margin-bottom:28px;
+}
+
+/* ── OPTION CARDS (tap to select) ── */
+.option-grid{
+  display:grid;gap:10px;
+  margin-bottom:28px;
+}
+.option-grid.cols-2{grid-template-columns:1fr 1fr;}
+.option-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+.option-grid.cols-1{grid-template-columns:1fr;}
+
+.option-card{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;
+  border:2px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);
+  cursor:pointer;transition:all .18s;
+  text-align:left;user-select:none;
+}
+.option-card:hover{border-color:var(--border-mid);background:var(--blue-soft);}
+.option-card.selected{
+  border-color:var(--blue-mid);
+  background:var(--blue-soft);
+  box-shadow:0 0 0 3px rgba(0,102,255,0.12);
+}
+.option-card.selected .oc-check{opacity:1;transform:scale(1);}
+.oc-icon{font-size:22px;flex-shrink:0;width:32px;text-align:center;line-height:1;}
+.oc-text{flex:1;min-width:0;}
+.oc-label{font-size:14px;font-weight:600;color:var(--text);}
+.oc-desc{font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.4;}
+.oc-check{
+  width:20px;height:20px;border-radius:50%;
+  background:var(--blue-mid);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:scale(0);
+  transition:all .2s cubic-bezier(.4,0,.2,1);
+  flex-shrink:0;
+}
+.oc-check svg{width:10px;height:10px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;}
+
+/* Compact option (no description) */
+.option-card.compact{padding:12px 14px;}
+.option-card.compact .oc-icon{font-size:18px;width:24px;}
+.option-card.compact .oc-label{font-size:13.5px;}
+
+/* ── INPUT FIELDS ── */
+.input-group{margin-bottom:28px;}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.input-row.single{grid-template-columns:1fr;}
+.field-wrap{display:flex;flex-direction:column;gap:6px;}
+.field-label{font-family:var(--font-mono);font-size:10px;letter-spacing:1.5px;color:var(--text-muted);text-transform:uppercase;font-weight:600;}
+.field-input{
+  padding:12px 14px;
+  border:1.5px solid var(--border-mid);border-radius:var(--radius-sm);
+  background:var(--surface);color:var(--text);
+  font-family:var(--font-body);font-size:15px;
+  outline:none;transition:all .18s;
+}
+.field-input:focus{border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(0,102,255,0.1);}
+.field-input::placeholder{color:var(--text-dim);}
+.field-hint{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+/* Unit toggle for weight/height */
+.unit-toggle{
+  display:flex;background:var(--surface3);border:1px solid var(--border);
+  border-radius:8px;padding:3px;gap:2px;width:fit-content;margin-top:6px;
+}
+.ut-btn{
+  padding:5px 14px;border:none;border-radius:6px;
+  background:transparent;font-family:var(--font-mono);font-size:11px;
+  color:var(--text-dim);cursor:pointer;transition:all .15s;
+}
+.ut-btn.active{background:var(--blue-mid);color:#fff;}
+
+/* Days per week slider */
+.days-slider-wrap{margin-bottom:28px;}
+.days-display{
+  font-family:var(--font-display);font-size:52px;
+  color:var(--blue-mid);letter-spacing:2px;
+  text-align:center;line-height:1;margin:16px 0 8px;
+}
+.days-label{text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:16px;}
+.days-slider{
+  width:100%;-webkit-appearance:none;appearance:none;
+  height:6px;border-radius:3px;
+  background:linear-gradient(90deg,var(--blue-mid) var(--pct,57%),var(--border) var(--pct,57%));
+  outline:none;cursor:pointer;
+}
+.days-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--blue-mid);border:3px solid #fff;
+  box-shadow:0 2px 8px rgba(0,102,255,0.4);cursor:pointer;
+}
+.days-slider::-moz-range-thumb{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--blue-mid);border:3px solid #fff;
+  box-shadow:0 2px 8px rgba(0,102,255,0.4);cursor:pointer;
+}
+.days-ticks{display:flex;justify-content:space-between;padding:0 2px;margin-top:8px;}
+.days-tick{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);cursor:pointer;}
+.days-tick.active{color:var(--blue-mid);font-weight:600;}
+
+/* ── NAV BUTTONS ── */
+.step-nav{
+  display:flex;gap:10px;justify-content:flex-end;
+  margin-top:4px;
+}
+.btn-back{
+  padding:12px 22px;
+  border:1.5px solid var(--border-mid);border-radius:var(--radius-sm);
+  background:transparent;color:var(--text-muted);
+  font-family:var(--font-body);font-size:14px;font-weight:500;
+  cursor:pointer;transition:all .15s;
+}
+.btn-back:hover{background:var(--blue-soft);border-color:var(--blue-mid);color:var(--blue-mid);}
+.btn-next{
+  padding:12px 28px;
+  border:none;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--blue-mid),var(--blue-deep));
+  color:#fff;font-family:var(--font-body);font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .18s;
+  box-shadow:0 4px 16px rgba(0,102,255,0.3);
+  display:flex;align-items:center;gap:8px;
+}
+.btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,102,255,0.4);}
+.btn-next:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-next .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;flex-shrink:0;}
+
+/* ── GENERATING SCREEN ── */
+.generating-screen{
+  width:100%;max-width:560px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:48px 36px;
+  box-shadow:var(--shadow-md);
+  text-align:center;
+  display:none;
+  animation:fadeUp .35s ease;
+}
+.gen-icon{
+  width:72px;height:72px;
+  background:linear-gradient(135deg,var(--blue-soft),var(--cyan-soft));
+  border:2px solid var(--border-mid);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;font-size:28px;
+}
+.gen-title{font-family:var(--font-display);font-size:26px;letter-spacing:2px;color:var(--text);margin-bottom:8px;}
+.gen-sub{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:28px;max-width:360px;margin-left:auto;margin-right:auto;}
+.gen-steps{
+  display:flex;flex-direction:column;gap:10px;
+  max-width:340px;margin:0 auto 28px;text-align:left;
+}
+.gen-step{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;border-radius:10px;
+  background:var(--surface3);border:1px solid var(--border);
+  font-size:13px;color:var(--text-muted);
+  transition:all .3s;
+}
+.gen-step.active{background:var(--blue-soft);border-color:var(--border-mid);color:var(--text);}
+.gen-step.done{background:var(--green-soft);border-color:rgba(40,192,99,.25);color:var(--green);}
+.gen-step-icon{font-size:16px;flex-shrink:0;width:24px;text-align:center;}
+.gen-step-icon.spinning{animation:spin .8s linear infinite;display:inline-block;}
+.gen-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;max-width:340px;margin:0 auto;}
+.gen-bar{height:100%;background:linear-gradient(90deg,var(--blue-mid),var(--cyan));border-radius:3px;width:0;transition:width .6s ease;}
+
+/* ── DONE SCREEN ── */
+.done-screen{
+  width:100%;max-width:560px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:48px 36px;
+  box-shadow:var(--shadow-md);
+  text-align:center;
+  display:none;
+  animation:fadeUp .35s ease;
+}
+.done-icon{
+  width:80px;height:80px;
+  background:linear-gradient(135deg,rgba(57,224,122,.15),rgba(40,192,99,.25));
+  border:2px solid var(--lime);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+  animation:checkPop .5s cubic-bezier(.4,0,.2,1) .1s both;
+}
+.done-icon svg{width:36px;height:36px;stroke:var(--lime-dark);fill:none;stroke-width:2.5;stroke-linecap:round;}
+.done-title{font-family:var(--font-display);font-size:30px;letter-spacing:2px;color:var(--text);margin-bottom:8px;}
+.done-sub{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:28px;}
+.done-summary{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  margin-bottom:28px;text-align:left;
+}
+.summary-cell{
+  padding:12px 14px;border-radius:10px;
+  background:var(--surface3);border:1px solid var(--border);
+}
+.summary-label{font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:4px;}
+.summary-value{font-size:13.5px;font-weight:600;color:var(--text);}
+.btn-go{
+  width:100%;padding:14px;
+  border:none;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,var(--lime),var(--lime-dark));
+  color:#0D1628;font-family:var(--font-body);font-size:15px;font-weight:700;
+  cursor:pointer;transition:all .2s;
+  box-shadow:0 4px 20px rgba(57,224,122,0.4);
+}
+.btn-go:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(57,224,122,0.5);}
+
+/* ── CONFETTI PARTICLES ── */
+.confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:999;overflow:hidden;}
+.confetti-p{
+  position:absolute;width:8px;height:8px;border-radius:2px;
+  animation:confetti 1.2s ease-out forwards;
+}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;right:22px;z-index:9999;padding:12px 18px;background:var(--surface);border:1.5px solid var(--border-mid);border-radius:12px;font-size:13px;color:var(--text);animation:toastIn .3s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow-lg);max-width:320px;}
+.toast.error{border-color:rgba(229,62,62,.35);color:var(--red);}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .step-card,.generating-screen,.done-screen{padding:24px 18px;border-radius:16px;}
+  .option-grid.cols-3{grid-template-columns:1fr 1fr;}
+  .option-grid.cols-2{grid-template-columns:1fr;}
+  .input-row{grid-template-columns:1fr;}
+  .done-summary{grid-template-columns:1fr;}
+  .step-title{font-size:23px;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <a class="logo-wrap" href="index.html">
+    <div class="logo-img-box">
+      <img src="logo.png" alt="FC" onerror="this.parentElement.style.display='none';document.getElementById('hdrFb').style.display='flex'">
+    </div>
+    <div class="logo-fallback" id="hdrFb" style="display:none;">
+      <svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 8h4M17 8h4M3 16h4M17 16h4"/></svg>
+    </div>
+    <div class="logo-text">FITCORE<em>.AI</em><span class="logo-dot"></span></div>
+  </a>
+  <div class="header-tag">Profile Setup</div>
+</header>
+
+<!-- CONFETTI -->
+<div class="confetti-wrap" id="confettiWrap"></div>
+
+<!-- MAIN -->
+<div class="setup-container">
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-header">
+      <span class="progress-title">Setting Up</span>
+      <span class="progress-fraction" id="progressFraction">Step 1 of 6</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:16.6%"></div>
+    </div>
+    <div class="step-dots" id="stepDots"></div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 1 — What to call you
+  ══════════════════════════════ -->
+  <div class="step-card" id="step1">
+    <div class="step-eyebrow">Step 1 — Personal</div>
+    <div class="step-title">What should<br><em>FITCORE</em> call you?</div>
+    <div class="step-sub">This is how your AI coach will address you. Pick whatever feels right — nickname, first name, anything.</div>
+
+    <div class="input-group">
+      <div class="input-row single">
+        <div class="field-wrap">
+          <label class="field-label">Your Name / Nickname</label>
+          <input type="text" id="inputNickname" class="field-input" placeholder="e.g. Ravi, Bro, Champ..." maxlength="30" autocomplete="off">
+          <span class="field-hint">This will personalise your chat experience</span>
+        </div>
+      </div>
+
+      <div class="input-row" style="margin-top:14px;">
+        <div class="field-wrap">
+          <label class="field-label">Gender</label>
+          <select id="inputGender" class="field-input">
+            <option value="">Select...</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other / Prefer not to say</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Age</label>
+          <input type="number" id="inputAge" class="field-input" placeholder="e.g. 21" min="10" max="99">
+        </div>
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn-next" onclick="nextStep(1)">
+        Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 2 — Body stats
+  ══════════════════════════════ -->
+  <div class="step-card" id="step2" style="display:none;">
+    <div class="step-eyebrow">Step 2 — Body Stats</div>
+    <div class="step-title">Your current<br><em>measurements</em></div>
+    <div class="step-sub">Used to calculate your maintenance calories and personalise your nutrition plan. You can update these anytime.</div>
+
+    <div class="input-group">
+      <div class="input-row">
+        <div class="field-wrap">
+          <label class="field-label">Weight</label>
+          <input type="number" id="inputWeight" class="field-input" placeholder="e.g. 70" min="30" max="300">
+          <div class="unit-toggle" id="weightUnitToggle">
+            <button class="ut-btn active" onclick="setUnit('weight','kg',this)">kg</button>
+            <button class="ut-btn" onclick="setUnit('weight','lbs',this)">lbs</button>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Height</label>
+          <input type="number" id="inputHeight" class="field-input" placeholder="e.g. 175" min="100" max="250">
+          <div class="unit-toggle" id="heightUnitToggle">
+            <button class="ut-btn active" onclick="setUnit('height','cm',this)">cm</button>
+            <button class="ut-btn" onclick="setUnit('height','ft',this)">ft</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn-back" onclick="prevStep(2)">← Back</button>
+      <button class="btn-next" onclick="nextStep(2)">
+        Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 3 — Goal
+  ══════════════════════════════ -->
+  <div class="step-card" id="step3" style="display:none;">
+    <div class="step-eyebrow">Step 3 — Your Goal</div>
+    <div class="step-title">What do you<br>want to <em>achieve?</em></div>
+    <div class="step-sub">Your AI coach will optimise your workout split, nutrition targets, and recovery plan around this goal.</div>
+
+    <div class="option-grid cols-1" id="goalGrid">
+      <div class="option-card" data-val="bulk" onclick="selectOption('goal','bulk',this)">
+        <div class="oc-icon">💪</div>
+        <div class="oc-text">
+          <div class="oc-label">Bulk — Build Muscle</div>
+          <div class="oc-desc">Gain size and strength with a calorie surplus and progressive overload</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="cut" onclick="selectOption('goal','cut',this)">
+        <div class="oc-icon">🔥</div>
+        <div class="oc-text">
+          <div class="oc-label">Cut — Lose Fat</div>
+          <div class="oc-desc">Shed body fat while preserving muscle with a calorie deficit</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="maintain" onclick="selectOption('goal','maintain',this)">
+        <div class="oc-icon">⚖️</div>
+        <div class="oc-text">
+          <div class="oc-label">Maintain — Stay Fit</div>
+          <div class="oc-desc">Keep current weight, improve conditioning and overall health</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="strength" onclick="selectOption('goal','strength',this)">
+        <div class="oc-icon">🏋️</div>
+        <div class="oc-text">
+          <div class="oc-label">Strength — Get Stronger</div>
+          <div class="oc-desc">Focus on lifting heavier with powerlifting-style programming</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="endurance" onclick="selectOption('goal','endurance',this)">
+        <div class="oc-icon">🏃</div>
+        <div class="oc-text">
+          <div class="oc-label">Endurance — Cardio & Stamina</div>
+          <div class="oc-desc">Improve cardiovascular fitness, stamina, and athletic performance</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn-back" onclick="prevStep(3)">← Back</button>
+      <button class="btn-next" onclick="nextStep(3)">
+        Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 4 — Training type
+  ══════════════════════════════ -->
+  <div class="step-card" id="step4" style="display:none;">
+    <div class="step-eyebrow">Step 4 — Equipment</div>
+    <div class="step-title">How do<br>you <em>train?</em></div>
+    <div class="step-sub">Your plan will only include exercises you can actually do with the equipment you have access to.</div>
+
+    <div class="option-grid cols-1" id="trainingGrid">
+      <div class="option-card" data-val="gym" onclick="selectOption('training_type','gym',this)">
+        <div class="oc-icon">🏢</div>
+        <div class="oc-text">
+          <div class="oc-label">Gym — Full Equipment</div>
+          <div class="oc-desc">Barbells, machines, cables, dumbbells — the full setup</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="home_dumbbell" onclick="selectOption('training_type','home_dumbbell',this)">
+        <div class="oc-icon">🏠</div>
+        <div class="oc-text">
+          <div class="oc-label">Home — Dumbbells</div>
+          <div class="oc-desc">Home workout with dumbbells and basic equipment</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="calisthenics" onclick="selectOption('training_type','calisthenics',this)">
+        <div class="oc-icon">🤸</div>
+        <div class="oc-text">
+          <div class="oc-label">Calisthenics / Bodyweight</div>
+          <div class="oc-desc">Push-ups, pull-ups, dips, squats — no equipment needed</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="hybrid" onclick="selectOption('training_type','hybrid',this)">
+        <div class="oc-icon">🔀</div>
+        <div class="oc-text">
+          <div class="oc-label">Hybrid — Mix it up</div>
+          <div class="oc-desc">Combination of gym, home, and bodyweight exercises</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn-back" onclick="prevStep(4)">← Back</button>
+      <button class="btn-next" onclick="nextStep(4)">
+        Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 5 — Fitness level
+  ══════════════════════════════ -->
+  <div class="step-card" id="step5" style="display:none;">
+    <div class="step-eyebrow">Step 5 — Experience</div>
+    <div class="step-title">What's your<br><em>fitness level?</em></div>
+    <div class="step-sub">Be honest — this determines exercise complexity, volume, and rest times. There's no wrong answer.</div>
+
+    <div class="option-grid cols-1" id="levelGrid">
+      <div class="option-card" data-val="beginner" onclick="selectOption('fitness_level','beginner',this)">
+        <div class="oc-icon">🌱</div>
+        <div class="oc-text">
+          <div class="oc-label">Beginner</div>
+          <div class="oc-desc">Less than 6 months of consistent training, still learning movements</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="intermediate" onclick="selectOption('fitness_level','intermediate',this)">
+        <div class="oc-icon">⚡</div>
+        <div class="oc-text">
+          <div class="oc-label">Intermediate</div>
+          <div class="oc-desc">6 months to 3 years, comfortable with main lifts and movements</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="option-card" data-val="advanced" onclick="selectOption('fitness_level','advanced',this)">
+        <div class="oc-icon">🔥</div>
+        <div class="oc-text">
+          <div class="oc-label">Advanced</div>
+          <div class="oc-desc">3+ years, strong technique, training near your genetic potential</div>
+        </div>
+        <div class="oc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn-back" onclick="prevStep(5)">← Back</button>
+      <button class="btn-next" onclick="nextStep(5)">
+        Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════
+       STEP 6 — Days per week
+  ══════════════════════════════ -->
+  <div class="step-card" id="step6" style="display:none;">
+    <div class="step-eyebrow">Step 6 — Schedule</div>
+    <div class="step-title">How many days<br>can you <em>train?</em></div>
+    <div class="step-sub">Your weekly plan will be built exactly around this. Rest days will be placed intelligently for maximum recovery.</div>
+
+    <div class="days-slider-wrap">
+      <div class="days-display" id="daysDisplay">4</div>
+      <div class="days-label" id="daysLabel">days per week — good balance of training and recovery</div>
+      <input type="range" class="days-slider" id="daysSlider" min="2" max="7" value="4"
+             oninput="updateDays(this.value)">
+      <div class="days-ticks">
+        <span class="days-tick" onclick="setDays(2)">2</span>
+        <span class="days-tick" onclick="setDays(3)">3</span>
+        <span class="days-tick active" onclick="setDays(4)">4</span>
+        <span class="days-tick" onclick="setDays(5)">5</span>
+        <span class="days-tick" onclick="setDays(6)">6</span>
+        <span class="days-tick" onclick="setDays(7)">7</span>
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn-back" onclick="prevStep(6)">← Back</button>
+      <button class="btn-next" id="finishBtn" onclick="finishSetup()">
+        <div class="spinner" id="finishSpinner"></div>
+        <span id="finishBtnText">Build My Plan 🚀</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- GENERATING SCREEN -->
+  <div class="generating-screen" id="generatingScreen">
+    <div class="gen-icon">🤖</div>
+    <div class="gen-title">Building Your Plan</div>
+    <div class="gen-sub" id="genSub">Hang tight — your AI coach is crafting a personalised 7-day plan based on your profile.</div>
+    <div class="gen-steps">
+      <div class="gen-step" id="genStep1">
+        <span class="gen-step-icon" id="genIcon1">📋</span>
+        <span>Saving your profile...</span>
+      </div>
+      <div class="gen-step" id="genStep2">
+        <span class="gen-step-icon" id="genIcon2">🧠</span>
+        <span>Asking AI to generate your plan...</span>
+      </div>
+      <div class="gen-step" id="genStep3">
+        <span class="gen-step-icon" id="genIcon3">📅</span>
+        <span>Structuring your weekly schedule...</span>
+      </div>
+      <div class="gen-step" id="genStep4">
+        <span class="gen-step-icon" id="genIcon4">✅</span>
+        <span>Saving to your Progress Tracker...</span>
+      </div>
+    </div>
+    <div class="gen-bar-wrap"><div class="gen-bar" id="genBar"></div></div>
+  </div>
+
+  <!-- DONE SCREEN -->
+  <div class="done-screen" id="doneScreen">
+    <div class="done-icon">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="done-title" id="doneTitle">You're all set! 🎉</div>
+    <div class="done-sub" id="doneSub">Your personalised plan is ready. Head to the dashboard to see today's workout.</div>
+    <div class="done-summary" id="doneSummary"></div>
+    <button class="btn-go" onclick="window.location.href='index.html'">Go to Dashboard →</button>
+  </div>
+
+</div><!-- /setup-container -->
+
+<script>
+const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
+const TOTAL_STEPS = 6;
+
+// ── STATE ──────────────────────────────────────────────────
+const profile = {
+  nickname: '', gender: '', age: '',
+  weight: '', weight_unit: 'kg',
+  height: '', height_unit: 'cm',
+  goal: '', training_type: '',
+  fitness_level: '', days_per_week: 4
+};
+let selections = { goal: null, training_type: null, fitness_level: null };
+let currentStep = 1;
+let _auth = null;
+
+// ── AUTH CHECK ─────────────────────────────────────────────
+async function initAuth() {
+  try { _auth = await handleSupabaseSession(); } catch { _auth = getLocalAuth(); }
+  if (!_auth || !_auth.uid) { window.location.href = 'auth.html'; return false; }
+  // Pre-fill nickname from auth name
+  const nicknameEl = document.getElementById('inputNickname');
+  if (nicknameEl && _auth.name) nicknameEl.value = _auth.name.split(' ')[0];
+  return true;
+}
+
+// ── PROGRESS UI ────────────────────────────────────────────
+function updateProgress(step) {
+  const pct = (step / TOTAL_STEPS) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressFraction').textContent = `Step ${step} of ${TOTAL_STEPS}`;
+  // Dots
+  const dotsEl = document.getElementById('stepDots');
+  dotsEl.innerHTML = '';
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i < step ? ' done' : i === step ? ' active' : '');
+    dotsEl.appendChild(d);
+  }
+}
+
+// ── STEP NAVIGATION ────────────────────────────────────────
+function showStep(n) {
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    const el = document.getElementById('step' + i);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+  }
+  updateProgress(n);
+  currentStep = n;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextStep(from) {
+  if (!validateStep(from)) return;
+  collectStep(from);
+  if (from < TOTAL_STEPS) showStep(from + 1);
+}
+
+function prevStep(from) {
+  if (from > 1) showStep(from - 1);
+}
+
+// ── VALIDATION ─────────────────────────────────────────────
+function validateStep(step) {
+  if (step === 1) {
+    const nick = document.getElementById('inputNickname').value.trim();
+    if (!nick) { showToast('Please enter a name or nickname', 'error'); return false; }
+    return true;
+  }
+  if (step === 2) {
+    const w = document.getElementById('inputWeight').value;
+    const h = document.getElementById('inputHeight').value;
+    if (!w || !h) { showToast('Please enter your weight and height', 'error'); return false; }
+    return true;
+  }
+  if (step === 3) {
+    if (!selections.goal) { showToast('Please select your goal', 'error'); return false; }
+    return true;
+  }
+  if (step === 4) {
+    if (!selections.training_type) { showToast('Please select your training type', 'error'); return false; }
+    return true;
+  }
+  if (step === 5) {
+    if (!selections.fitness_level) { showToast('Please select your fitness level', 'error'); return false; }
+    return true;
+  }
+  return true;
+}
+
+// ── COLLECT DATA FROM EACH STEP ────────────────────────────
+function collectStep(step) {
+  if (step === 1) {
+    profile.nickname = document.getElementById('inputNickname').value.trim();
+    profile.gender   = document.getElementById('inputGender').value;
+    profile.age      = document.getElementById('inputAge').value;
+  }
+  if (step === 2) {
+    profile.weight      = document.getElementById('inputWeight').value;
+    profile.height      = document.getElementById('inputHeight').value;
+  }
+  if (step === 3) profile.goal          = selections.goal;
+  if (step === 4) profile.training_type = selections.training_type;
+  if (step === 5) profile.fitness_level = selections.fitness_level;
+  if (step === 6) profile.days_per_week = parseInt(document.getElementById('daysSlider').value);
+}
+
+// ── OPTION SELECTION ────────────────────────────────────────
+function selectOption(key, val, el) {
+  // Deselect all in same grid
+  const grid = el.closest('.option-grid');
+  grid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selections[key] = val;
+}
+
+// ── UNIT TOGGLES ────────────────────────────────────────────
+function setUnit(field, unit, btn) {
+  const toggleId = field === 'weight' ? 'weightUnitToggle' : 'heightUnitToggle';
+  document.querySelectorAll(`#${toggleId} .ut-btn`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  profile[field + '_unit'] = unit;
+  // Update placeholder
+  const inp = document.getElementById(field === 'weight' ? 'inputWeight' : 'inputHeight');
+  if (field === 'weight') inp.placeholder = unit === 'kg' ? 'e.g. 70' : 'e.g. 154';
+  if (field === 'height') inp.placeholder = unit === 'cm' ? 'e.g. 175' : 'e.g. 5.9';
+}
+
+// ── DAYS SLIDER ────────────────────────────────────────────
+const DAY_LABELS = {
+  2: 'days per week — great for beginners and busy schedules',
+  3: 'days per week — solid foundation for all-round fitness',
+  4: 'days per week — good balance of training and recovery',
+  5: 'days per week — high frequency for faster progress',
+  6: 'days per week — dedicated athlete schedule',
+  7: 'days per week — elite level, include active recovery days'
+};
+function updateDays(val) {
+  const n = parseInt(val);
+  document.getElementById('daysDisplay').textContent = n;
+  document.getElementById('daysLabel').textContent = DAY_LABELS[n];
+  // Update slider gradient
+  const slider = document.getElementById('daysSlider');
+  const pct = ((n - 2) / 5) * 100;
+  slider.style.setProperty('--pct', pct + '%');
+  // Update ticks
+  document.querySelectorAll('.days-tick').forEach((t, i) => {
+    t.classList.toggle('active', (i + 2) === n);
+  });
+  profile.days_per_week = n;
+}
+function setDays(n) {
+  document.getElementById('daysSlider').value = n;
+  updateDays(n);
+}
+
+// ── BUILD PROMPT FOR AI ────────────────────────────────────
+function buildPrompt(p) {
+  const trainingMap = {
+    gym: 'gym with full equipment (barbells, machines, cables, dumbbells)',
+    home_dumbbell: 'home with dumbbells and basic equipment',
+    calisthenics: 'bodyweight/calisthenics only (no equipment)',
+    hybrid: 'hybrid of gym and home/bodyweight exercises'
+  };
+  const goalMap = {
+    bulk: 'build muscle mass (bulking)',
+    cut: 'lose body fat (cutting)',
+    maintain: 'maintain weight and improve overall fitness',
+    strength: 'build strength (powerlifting style)',
+    endurance: 'improve cardiovascular endurance and stamina'
+  };
+  const weightKg = p.weight_unit === 'lbs' ? Math.round(p.weight * 0.453592) : p.weight;
+  const heightCm = p.height_unit === 'ft'  ? Math.round(p.height * 30.48)    : p.height;
+
+  return `Create a complete personalised 7-day workout plan for ${p.nickname || 'this user'}.
+
+Profile:
+- Gender: ${p.gender || 'not specified'}
+- Age: ${p.age || 'not specified'}
+- Weight: ${weightKg}kg
+- Height: ${heightCm}cm
+- Goal: ${goalMap[p.goal] || p.goal}
+- Training type: ${trainingMap[p.training_type] || p.training_type}
+- Fitness level: ${p.fitness_level}
+- Training days per week: ${p.days_per_week} days
+
+Requirements:
+- Create exactly ${p.days_per_week} training days and ${7 - p.days_per_week} rest/recovery day(s)
+- Label each day clearly: "Monday — Push Day", "Tuesday — Pull Day", etc.
+- For each training day list 5–7 specific exercises with sets and reps
+- Place rest days intelligently for maximum recovery
+- Match all exercises to the training type (${trainingMap[p.training_type] || p.training_type})
+- Align the split and volume with the goal: ${goalMap[p.goal] || p.goal}
+- Format: use markdown headers and bullet points`;
+}
+
+// ── PLAN PARSING ────────────────────────────────────────────
+const DAY_KW = {
+  push:['push','chest','shoulder','tricep','bench','press','overhead'],
+  pull:['pull','back','bicep','row','deadlift','lat','chin'],
+  legs:['leg','squat','lunge','glute','hamstring','quad','calf'],
+  core:['core','abs','plank','crunch','oblique'],
+  rest:['rest','recovery','off','stretch','yoga','walk','active']
+};
+const FULL_DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+
+function detectDayType(t) {
+  const l = t.toLowerCase();
+  for (const [type, kws] of Object.entries(DAY_KW)) {
+    if (kws.some(k => l.includes(k))) return type;
+  }
+  return 'general';
+}
+
+function parsePlanText(text) {
+  const result = {};
+  const lines  = text.split('\n');
+  let cur = null, ct = 'general';
+  for (const line of lines) {
+    const tr = line.trim();
+    if (!tr) continue;
+    const lo = tr.toLowerCase();
+    let md = null;
+    for (const day of FULL_DAYS) {
+      if (lo.includes(day) && (lo.includes('day') || lo.includes('—') || lo.includes('-') || lo.includes(':'))) {
+        md = day; break;
+      }
+    }
+    if (md) {
+      cur = md; ct = detectDayType(tr);
+      if (!result[cur]) result[cur] = [];
+      continue;
+    }
+    if (cur) {
+      const cl = tr.replace(/^[\s\-\*•\d\.#:]+/, '').trim();
+      if (cl.length < 6 || cl.length > 200) continue;
+      if (FULL_DAYS.some(d => cl.toLowerCase().startsWith(d))) continue;
+      if (/^(warm|cool|note|overview|week|plan|schedule|rest day)/i.test(cl)) continue;
+      result[cur].push({ task_text: cl, day_type: ct, badge: ct === 'rest' ? 'rest' : 'workout' });
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+// ── GEN STEP ANIMATION ─────────────────────────────────────
+function setGenStep(n, state) {
+  // state: 'active' | 'done'
+  const el   = document.getElementById('genStep' + n);
+  const icon = document.getElementById('genIcon' + n);
+  if (!el || !icon) return;
+  el.className = 'gen-step ' + state;
+  if (state === 'active') {
+    icon.className = 'gen-step-icon spinning';
+    icon.textContent = ['📋','🧠','📅','✅'][n - 1];
+  } else {
+    icon.className = 'gen-step-icon';
+    icon.textContent = '✅';
+  }
+}
+function setGenBar(pct) {
+  document.getElementById('genBar').style.width = pct + '%';
+}
+
+// ── FINISH — SAVE PROFILE + GENERATE PLAN ─────────────────
+async function finishSetup() {
+  collectStep(6);
+
+  // Disable button
+  const btn = document.getElementById('finishBtn');
+  document.getElementById('finishSpinner').style.display = 'block';
+  document.getElementById('finishBtnText').style.display = 'none';
+  btn.disabled = true;
+
+  // Show generating screen
+  document.getElementById('step6').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('generatingScreen').style.display = 'block';
+
+  const userId = _auth?.uid || getUserId();
+
+  try {
+    // ── STEP 1: Save profile ───────────────────────────────
+    setGenStep(1, 'active'); setGenBar(10);
+
+    const profilePayload = { ...profile, name: _auth?.name || profile.nickname };
+    // Save to backend
+    await fetch(`${BACKEND}/profile/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, profile: profilePayload })
+    });
+    // Save to localStorage for instant access
+    localStorage.setItem('fitcore_profile_' + userId, JSON.stringify(profilePayload));
+
+    setGenStep(1, 'done'); setGenBar(25);
+    await sleep(400);
+
+    // ── STEP 2: Generate plan via AI ───────────────────────
+    setGenStep(2, 'active'); setGenBar(35);
+
+    const prompt = buildPrompt(profile);
+    const chatRes = await fetch(`${BACKEND}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: prompt,
+        user_id: userId,
+        page: 'workout'
+      })
+    });
+
+    if (!chatRes.ok) throw new Error('AI generation failed');
+    const chatData = await chatRes.json();
+    const planText = chatData.reply;
+
+    setGenStep(2, 'done'); setGenBar(60);
+    await sleep(400);
+
+    // ── STEP 3: Parse the plan ─────────────────────────────
+    setGenStep(3, 'active'); setGenBar(70);
+
+    const parsed = parsePlanText(planText);
+    localStorage.setItem('fitcore_plan_v1', planText);
+    if (parsed) localStorage.setItem('fitcore_plan_full_v1', JSON.stringify(parsed));
+
+    setGenStep(3, 'done'); setGenBar(82);
+    await sleep(400);
+
+    // ── STEP 4: Save plan + today's tasks ─────────────────
+    setGenStep(4, 'active'); setGenBar(90);
+
+    if (parsed) {
+      // Save full plan to backend
+      await fetch(`${BACKEND}/plan/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, plan: parsed, raw: planText })
+      }).catch(() => {});
+
+      // Save today's tasks
+      const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const todayTasks = parsed[todayName] || [];
+      if (todayTasks.length) {
+        await fetch(`${BACKEND}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, tasks: todayTasks })
+        }).catch(() => {});
+      }
+    }
+
+    setGenStep(4, 'done'); setGenBar(100);
+    await sleep(600);
+
+    // ── SHOW DONE ──────────────────────────────────────────
+    showDoneScreen(planText, parsed);
+
+  } catch (err) {
+    // Backend/AI failed — still save profile and go to dashboard
+    console.warn('Plan generation failed:', err.message);
+    document.getElementById('generatingScreen').style.display = 'none';
+    document.getElementById('progressWrap').style.display = 'block';
+    document.getElementById('step6').style.display = 'block';
+    btn.disabled = false;
+    document.getElementById('finishSpinner').style.display = 'none';
+    document.getElementById('finishBtnText').style.display = 'block';
+    showToast('Profile saved! Plan generation failed — try again from the chat page.', 'error');
+    // Still redirect after 3s
+    setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+  }
+}
+
+function showDoneScreen(planText, parsed) {
+  document.getElementById('generatingScreen').style.display = 'none';
+
+  const screen = document.getElementById('doneScreen');
+  screen.style.display = 'block';
+
+  const name = profile.nickname || _auth?.name?.split(' ')[0] || 'Champ';
+  document.getElementById('doneTitle').textContent = `You're all set, ${name}! 🎉`;
+
+  const daysCount = parsed ? Object.keys(parsed).filter(d => {
+    const tasks = parsed[d];
+    return tasks && tasks.length && tasks[0]?.day_type !== 'rest';
+  }).length : profile.days_per_week;
+
+  // Summary cells
+  const goalLabels = { bulk:'Build Muscle', cut:'Lose Fat', maintain:'Stay Fit', strength:'Get Stronger', endurance:'Build Stamina' };
+  const trainingLabels = { gym:'Gym', home_dumbbell:'Home + Dumbbells', calisthenics:'Calisthenics', hybrid:'Hybrid' };
+  const levelLabels = { beginner:'Beginner', intermediate:'Intermediate', advanced:'Advanced' };
+
+  document.getElementById('doneSummary').innerHTML = `
+    <div class="summary-cell"><div class="summary-label">Goal</div><div class="summary-value">${goalLabels[profile.goal] || profile.goal}</div></div>
+    <div class="summary-cell"><div class="summary-label">Training</div><div class="summary-value">${trainingLabels[profile.training_type] || profile.training_type}</div></div>
+    <div class="summary-cell"><div class="summary-label">Level</div><div class="summary-value">${levelLabels[profile.fitness_level] || profile.fitness_level}</div></div>
+    <div class="summary-cell"><div class="summary-label">Days / Week</div><div class="summary-value">${profile.days_per_week} days</div></div>
+  `;
+
+  fireConfetti();
+}
+
+// ── CONFETTI ────────────────────────────────────────────────
+function fireConfetti() {
+  const wrap   = document.getElementById('confettiWrap');
+  const colors = ['#0066FF','#00C8FF','#39E07A','#FFD700','#FF6B6B','#A855F7'];
+  for (let i = 0; i < 40; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'confetti-p';
+      p.style.cssText = `
+        left:${Math.random() * 100}%;
+        top:${60 + Math.random() * 30}%;
+        background:${colors[Math.floor(Math.random() * colors.length)]};
+        animation-duration:${0.8 + Math.random() * 0.8}s;
+        animation-delay:${Math.random() * 0.4}s;
+        transform:rotate(${Math.random() * 360}deg);
+        width:${6 + Math.random() * 6}px;
+        height:${6 + Math.random() * 6}px;
+        border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+      `;
+      wrap.appendChild(p);
+      setTimeout(() => p.remove(), 2000);
+    }, i * 30);
+  }
+}
+
+// ── UTILITIES ──────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+let _toastTimer = null;
+function showToast(msg, type = '') {
+  const ex = document.querySelector('.toast');
+  if (ex) ex.remove();
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.remove(), 4000);
+}
+
+// ── INIT ────────────────────────────────────────────────────
+(async function init() {
+  const ok = await initAuth();
+  if (!ok) return;
+  showStep(1);
+  updateDays(4);
+})();
+</script>
+</body>
+</html>

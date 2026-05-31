@@ -281,9 +281,19 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .toast.success{border-color:rgba(40,192,99,.4);color:var(--green);background:var(--green-soft);}
 .toast.error{border-color:rgba(229,62,62,.35);color:var(--red);}
 
+@media(max-width:1050px){.right-panel{display:none;}}
 @media(max-width:1000px){.tools-panel{width:300px;}}
-@media(max-width:860px){.tools-panel{display:none;}}
+@media(max-width:860px){.sidebar{display:none;}}
+@media(max-width:800px){
+  .tools-panel{position:fixed;top:54px;left:0;bottom:0;z-index:100;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow-lg);display:flex!important;width:300px;}
+  .tools-panel.open{transform:translateX(0);}
+  .tools-overlay{display:none;position:fixed;inset:0;top:54px;background:rgba(0,0,0,0.28);z-index:99;}
+  .tools-overlay.open{display:block;}
+  .tools-toggle-btn{display:flex!important;}
+}
 @media(max-width:700px){.sidebar,.right-panel{display:none;}.header-nav{display:none;}.messages{padding:14px;}.bubble{max-width:calc(100vw - 76px);}.quick-prompts{padding:0 14px 8px;}.input-bar{padding:8px 14px 14px;}.input-hint{display:none;}}
+.tools-toggle-btn{display:none;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid rgba(13,148,136,0.3);border-radius:9px;background:var(--teal-soft);color:var(--teal);font-family:var(--font-body);font-size:12.5px;font-weight:500;cursor:pointer;flex-shrink:0;}
+.tools-toggle-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
 </style>
 </head>
 <body>
@@ -306,8 +316,12 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
     <a class="hn-tab active" href="mental.html"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Wellness</a>
     <a class="hn-tab" href="progress.html"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
   </nav>
+  <button class="tools-toggle-btn" id="toolsToggleBtn" onclick="toggleToolsPanel()">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Tools
+  </button>
   <div class="profile-wrap" id="profileWrap"></div>
 </header>
+<div class="tools-overlay" id="toolsOverlay" onclick="closeToolsPanel()"></div>
 
 <div class="layout">
   <aside class="sidebar">
@@ -332,7 +346,7 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 
   <div class="main-area">
     <!-- TOOLS PANEL -->
-    <div class="tools-panel">
+    <div class="tools-panel" id="toolsPanel">
 
       <!-- 1. MOOD CHECK-IN -->
       <div class="tool-section">
@@ -565,6 +579,7 @@ function saveMood(){
   const log=getMoodLog().filter(e=>e.date!==todayStr());
   log.push({date:todayStr(),score:selectedMood.score,emoji:selectedMood.emoji,label:selectedMood.label,note,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
   saveMoodLog(log);
+  const lastEntry=log[log.length-1];syncMoodToSupabase(lastEntry);
   renderMoodHistory();updateMoodSidebar();renderMoodWeekBars();
   showToast(`Mood logged: ${selectedMood.emoji} ${selectedMood.label}`,'success');
   // Auto-chat if feeling low
@@ -644,7 +659,7 @@ function saveJournal(){
   const text=(document.getElementById('journalInput').value||'').trim();if(!text){showToast('Write something first!','error');return;}
   const log=getJournalLog();const te=getMoodLog().find(e=>e.date===todayStr());
   log.push({id:Date.now(),date:todayStr(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),text,mood:te?te.emoji:null});
-  saveJournalLog(log);document.getElementById('journalInput').value='';renderJournalList();showToast('Journal entry saved ✓','success');
+  saveJournalLog(log);syncJournalToSupabase(log[log.length-1]);document.getElementById('journalInput').value='';renderJournalList();showToast('Journal entry saved ✓','success');
 }
 function getJournalPrompt(){const p=J_PROMPTS[Math.floor(Math.random()*J_PROMPTS.length)];document.getElementById('journalInput').value=p+'\n\n';document.getElementById('journalInput').focus();}
 function renderJournalList(){
@@ -779,6 +794,40 @@ function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
+// ── TOOLS PANEL TOGGLE ───────────────────────
+function toggleToolsPanel(){
+  const p=document.getElementById('toolsPanel');
+  const o=document.getElementById('toolsOverlay');
+  p?.classList.toggle('open');o?.classList.toggle('open');
+}
+function closeToolsPanel(){
+  document.getElementById('toolsPanel')?.classList.remove('open');
+  document.getElementById('toolsOverlay')?.classList.remove('open');
+}
+
+// ── SUPABASE MOOD SYNC ────────────────────────
+async function syncMoodToSupabase(entry){
+  try{
+    const sb=getSupabase();if(!sb)return;
+    const uid=(_currentUser||getLocalAuth())?.uid;if(!uid)return;
+    await sb.from('mood_log').upsert({
+      user_id:uid,date:entry.date,score:entry.score,
+      emoji:entry.emoji,label:entry.label,note:entry.note||null
+    },{onConflict:'user_id,date'});
+  }catch(e){console.warn('Mood sync failed:',e.message);}
+}
+
+// ── SUPABASE JOURNAL SYNC ─────────────────────
+async function syncJournalToSupabase(entry){
+  try{
+    const sb=getSupabase();if(!sb)return;
+    const uid=(_currentUser||getLocalAuth())?.uid;if(!uid)return;
+    await sb.from('journal').insert({
+      user_id:uid,date:entry.date,text:entry.text,mood:entry.mood||null
+    });
+  }catch(e){console.warn('Journal sync failed:',e.message);}
+}
+
 (async function init(){
   const ok=await initAuth();if(!ok)return;
   renderProfileBtn();
@@ -786,6 +835,13 @@ function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)
   renderBreathSelector();renderJournalList();renderAffCats();showAffirmation();
   renderModeChips();setWellnessTip();
   const hadHistory=loadChatLog();if(hadHistory)showMessages();
+  else{
+    const a=_currentUser||getLocalAuth();
+    const name=a?.name?.split(' ')[0]||'there';
+    const te=getMoodLog().find(e=>e.date===todayStr());
+    const moodLine=te?`I see you're feeling **${te.label}** today ${te.emoji}. `:'';
+    addMsg(`Hey **${name}** 🧘 Welcome to your Mental Wellness space.\n\n${moodLine}I'm here to support you — whether it's stress, anxiety, sleep, motivation, or just needing someone to talk to.\n\nUse the **tools panel** on the left for mood check-ins, breathing exercises, journaling, and affirmations. Or just start talking — I'm listening.`,'bot');
+  }
   document.getElementById('userInput').focus();
 })();
 </script>

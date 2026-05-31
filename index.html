@@ -32,6 +32,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 @keyframes statusPulse{0%,100%{box-shadow:0 0 0 0 rgba(40,192,99,.5)}60%{box-shadow:0 0 0 6px rgba(40,192,99,0)}}
 @keyframes dot{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
 @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes streakGlow{0%,100%{filter:drop-shadow(0 0 4px #FF6B2B) drop-shadow(0 0 10px #FF4500)}50%{filter:drop-shadow(0 0 8px #FF8C4B) drop-shadow(0 0 18px #FF6B2B)}}
+@keyframes streakPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 
 /* ── HEADER ── */
 header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow-sm);}
@@ -51,6 +53,20 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .hn-tab svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0;}
 .hn-tab:hover{color:var(--blue-mid);background:var(--blue-soft);}
 .hn-tab.active{background:var(--blue-mid);color:#fff;box-shadow:0 2px 10px rgba(0,102,255,0.3);}
+
+/* ── STREAK ICON ── */
+.header-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.streak-wrap{position:relative;display:flex;align-items:center;}
+.streak-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid rgba(255,107,43,0.25);background:rgba(255,107,43,0.06);cursor:pointer;transition:all .2s;user-select:none;}
+.streak-btn:hover{background:rgba(255,107,43,0.12);border-color:rgba(255,107,43,0.4);}
+.streak-icon{font-size:16px;line-height:1;transition:all .3s;}
+.streak-icon.active{animation:streakGlow 2s ease-in-out infinite,streakPulse 2s ease-in-out infinite;}
+.streak-icon.inactive{filter:grayscale(1);opacity:0.4;}
+.streak-count{font-family:var(--font-display);font-size:15px;color:#FF6B2B;letter-spacing:1px;line-height:1;}
+.streak-count.inactive{color:var(--text-dim);}
+.streak-tooltip{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--border-mid);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-muted);white-space:nowrap;box-shadow:var(--shadow-md);opacity:0;pointer-events:none;transform:translateY(-4px);transition:all .18s;z-index:300;}
+.streak-wrap:hover .streak-tooltip{opacity:1;transform:translateY(0);}
+.streak-tooltip strong{display:block;color:var(--text);font-size:12.5px;margin-bottom:3px;}
 
 /* Profile */
 .profile-wrap{position:relative;}
@@ -109,6 +125,13 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .pb-text strong{color:var(--lime-dark);}
 .pb-link{font-size:12px;color:var(--blue-mid);text-decoration:none;font-weight:500;padding:4px 12px;border:1px solid var(--border-mid);border-radius:7px;background:var(--surface);transition:all .15s;white-space:nowrap;box-shadow:var(--shadow-sm);}
 .pb-link:hover{background:var(--blue-soft);}
+
+/* Profile incomplete banner */
+.profile-banner{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:10px 20px;background:linear-gradient(90deg,#FFF8E8,#FFF0D9);border-bottom:1px solid rgba(232,161,58,0.3);animation:fadeIn .3s ease;}
+.profile-banner .pb-dot{background:var(--amber);}
+.profile-banner .pb-text strong{color:#B07A10;}
+.profile-banner .pb-link{color:#B07A10;border-color:rgba(232,161,58,0.4);}
+.profile-banner .pb-link:hover{background:#FFF0D9;}
 
 /* Empty state */
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;animation:fadeIn .5s ease;}
@@ -191,6 +214,14 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .sync-card.synced strong{color:var(--green);}
 .sync-card a{color:var(--blue-mid);cursor:pointer;text-decoration:underline;}
 
+/* Streak mini card in right panel */
+.streak-card{padding:13px;border-radius:var(--radius);font-size:11.5px;line-height:1.6;border:1px solid;background:linear-gradient(135deg,#FFF4EE,#FFF0E0);border-color:rgba(255,107,43,0.25);}
+.streak-card .streak-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.streak-card .s-flame{font-size:24px;line-height:1;}
+.streak-card .s-count{font-family:var(--font-display);font-size:28px;color:#FF6B2B;line-height:1;}
+.streak-card .s-label{font-size:10px;color:#B07040;letter-spacing:.5px;}
+.streak-card .s-sub{font-size:11px;color:#B07040;}
+
 /* Toast */
 .toast{position:fixed;bottom:22px;right:22px;z-index:999;padding:12px 18px;background:var(--surface);border:1.5px solid var(--border-mid);border-radius:12px;font-size:13px;color:var(--text);animation:toastIn .3s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow-lg);max-width:320px;line-height:1.4;}
 .toast.success{border-color:rgba(40,192,99,.4);color:var(--green);background:var(--green-soft);}
@@ -220,7 +251,21 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
     <a class="hn-tab" href="mental.html"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Wellness</a>
     <a class="hn-tab" href="progress.html"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
   </nav>
-  <div class="profile-wrap" id="profileWrap"></div>
+  <div class="header-right">
+    <!-- Streak Icon -->
+    <div class="streak-wrap">
+      <div class="streak-btn" id="streakBtn" onclick="window.location.href='progress.html'">
+        <span class="streak-icon inactive" id="streakFlame">🔥</span>
+        <span class="streak-count inactive" id="streakCountHeader">0</span>
+      </div>
+      <div class="streak-tooltip" id="streakTooltip">
+        <strong id="streakTipTitle">No streak yet</strong>
+        <span id="streakTipSub">Open the app daily to build your streak!</span>
+      </div>
+    </div>
+    <!-- Profile -->
+    <div class="profile-wrap" id="profileWrap"></div>
+  </div>
 </header>
 
 <div class="layout">
@@ -237,7 +282,7 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
       <div class="sb-stats-label">Your Stats</div>
       <div class="sb-stats-grid">
         <div class="stat-cell"><div class="stat-val" id="statMsgs">0</div><div class="stat-key">Messages</div></div>
-        <div class="stat-cell"><div class="stat-val" id="statDays">1</div><div class="stat-key">Day Streak</div></div>
+        <div class="stat-cell"><div class="stat-val" id="statDays">0</div><div class="stat-key">Streak</div></div>
         <div class="stat-cell"><div class="stat-val" id="statLogs">0</div><div class="stat-key">Logs</div></div>
         <div class="stat-cell"><div class="stat-val" id="statWeek">—</div><div class="stat-key">Week</div></div>
       </div>
@@ -245,6 +290,14 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
   </aside>
 
   <main class="chat-area">
+    <!-- Profile incomplete banner -->
+    <div class="profile-banner" id="profileBanner" style="display:none;">
+      <div class="pb-dot"></div>
+      <div class="pb-text"><strong>Complete your profile</strong> — Let FITCORE.AI personalise your workout plan and nutrition guidance.</div>
+      <a class="pb-link" href="auth.html?setup=1" id="profileBannerLink">Set Up Profile →</a>
+    </div>
+
+    <!-- Plan active banner -->
     <div class="plan-banner" id="planBanner" style="display:none;">
       <div class="pb-dot"></div>
       <div class="pb-text"><strong>Workout Plan Active</strong> — Auto-synced to your Progress Tracker.</div>
@@ -292,6 +345,19 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
   </main>
 
   <aside class="right-panel">
+    <div>
+      <div class="rp-label">Your Streak</div>
+      <div class="streak-card">
+        <div class="streak-row">
+          <div class="s-flame" id="rpStreakFlame">🔥</div>
+          <div>
+            <div class="s-count" id="rpStreakCount">0</div>
+            <div class="s-label">DAY STREAK</div>
+          </div>
+        </div>
+        <div class="s-sub" id="rpStreakSub">Visit daily to keep your streak alive!</div>
+      </div>
+    </div>
     <div><div class="rp-label">Daily Tip</div><div class="tip-card" id="dailyTip"></div></div>
     <div>
       <div class="rp-label">Today's Metrics</div>
@@ -314,6 +380,8 @@ const PLAN_FULL_KEY = 'fitcore_plan_full_v1';
 const PLAN_KEY      = 'fitcore_plan_v1';
 const FIRST_DAY_KEY = 'fitcore_first_day';
 const LOG_COUNT_KEY = 'fitcore_log_count';
+const STREAK_KEY    = 'fitcore_streak_v1';   // {count, lastDate}
+const LAST_VISIT_KEY= 'fitcore_last_visit';
 
 // ─────────────────────────────────────────────
 // AUTH GUARD
@@ -324,6 +392,111 @@ async function initAuth() {
   try { _currentUser = await handleSupabaseSession(); } catch(e) { _currentUser = getLocalAuth(); }
   if (!_currentUser || !_currentUser.uid) { window.location.href = 'auth.html'; return false; }
   return true;
+}
+
+// ─────────────────────────────────────────────
+// STREAK LOGIC (Duolingo-style)
+// ─────────────────────────────────────────────
+function getTodayStr() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function updateStreak() {
+  const today = getTodayStr();
+  let streakData = { count: 0, lastDate: null };
+  try {
+    const raw = localStorage.getItem(STREAK_KEY);
+    if (raw) streakData = JSON.parse(raw);
+  } catch {}
+
+  const last = streakData.lastDate;
+
+  if (last === today) {
+    // Already visited today — streak unchanged, just render
+    renderStreak(streakData.count, true);
+    return streakData.count;
+  }
+
+  // Check if yesterday was the last visit
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+  if (last === yesterdayStr) {
+    // Consecutive day — increment
+    streakData.count += 1;
+  } else if (!last) {
+    // First ever visit
+    streakData.count = 1;
+  } else {
+    // Streak broken — reset to 1
+    streakData.count = 1;
+  }
+
+  streakData.lastDate = today;
+  localStorage.setItem(STREAK_KEY, JSON.stringify(streakData));
+  renderStreak(streakData.count, true);
+  return streakData.count;
+}
+
+function renderStreak(count, visitedToday) {
+  const flame  = document.getElementById('streakFlame');
+  const cntEl  = document.getElementById('streakCountHeader');
+  const tip    = document.getElementById('streakTipTitle');
+  const tipSub = document.getElementById('streakTipSub');
+  const rpFlame= document.getElementById('rpStreakFlame');
+  const rpCnt  = document.getElementById('rpStreakCount');
+  const rpSub  = document.getElementById('rpStreakSub');
+  const statEl = document.getElementById('statDays');
+
+  if (statEl) statEl.textContent = count;
+  if (rpCnt) rpCnt.textContent = count;
+
+  if (visitedToday && count > 0) {
+    if (flame) { flame.classList.remove('inactive'); flame.classList.add('active'); }
+    if (cntEl) { cntEl.classList.remove('inactive'); cntEl.textContent = count; }
+    if (tip) tip.textContent = count === 1 ? 'Day 1 — streak started! 🔥' : `${count}-day streak! Keep it going!`;
+    if (tipSub) tipSub.textContent = count >= 7 ? 'Incredible consistency! 💪' : 'Come back tomorrow to extend your streak.';
+    if (rpSub) rpSub.textContent = count >= 7 ? `${count} days straight — you're unstoppable! 🏆` : `Come back tomorrow to reach ${count + 1} days!`;
+  } else {
+    if (flame) { flame.classList.add('inactive'); flame.classList.remove('active'); }
+    if (cntEl) { cntEl.classList.add('inactive'); cntEl.textContent = count; }
+    if (tip) tip.textContent = 'Streak inactive today';
+    if (tipSub) tipSub.textContent = 'Open the app daily to keep it alive!';
+    if (rpSub) rpSub.textContent = 'Visit daily to keep your streak alive!';
+  }
+}
+
+// ─────────────────────────────────────────────
+// PROFILE COMPLETENESS CHECK
+// ─────────────────────────────────────────────
+async function checkProfileComplete() {
+  const auth = _currentUser || getLocalAuth();
+  if (!auth || !auth.uid) return;
+
+  // Check localStorage for saved profile data
+  const profileKey = 'fitcore_profile_' + auth.uid;
+  let profile = null;
+  try { profile = JSON.parse(localStorage.getItem(profileKey)); } catch {}
+
+  // Also check backend
+  if (!profile) {
+    try {
+      const res = await fetch(`${BACKEND}/profile/load?user_id=${auth.uid}`);
+      if (res.ok) {
+        const data = await res.json();
+        profile = data.profile;
+        if (profile && Object.keys(profile).length > 0) {
+          localStorage.setItem(profileKey, JSON.stringify(profile));
+        }
+      }
+    } catch {}
+  }
+
+  // Show banner if profile is missing key fields
+  const isComplete = profile && profile.goal && profile.training_type;
+  const banner = document.getElementById('profileBanner');
+  if (banner) banner.style.display = isComplete ? 'none' : 'flex';
 }
 
 // ─────────────────────────────────────────────
@@ -353,13 +526,14 @@ function renderProfileBtn() {
       <div class="pd-divider"></div>
       <a class="pd-btn" href="progress.html"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>View Progress</a>
       <a class="pd-btn" href="workout.html"><svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 8h4M17 8h4M3 16h4M17 16h4"/></svg>Workout Planner</a>
+      <a class="pd-btn" href="auth.html?setup=1"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Edit Profile</a>
       <button class="pd-btn danger" onclick="doSignOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
     </div>`;
 
   updateSyncCard();
   // Personalise greeting
   const greetEl = document.getElementById('greetName');
-  if (greetEl && a.name) greetEl.textContent = a.name.split(' ')[0].toUpperCase();
+  if (greetEl && a.name) greetEl.textContent = (a.nickname || a.name.split(' ')[0]).toUpperCase();
 }
 
 function toggleProfileMenu() { document.getElementById('profileDropdown')?.classList.toggle('open'); }
@@ -404,8 +578,6 @@ function updateMetrics(){
   document.getElementById('metricWeek').textContent='W'+wk;
   document.getElementById('metricDay').textContent=dy;
   document.getElementById('statWeek').textContent='W'+wk;
-  const first=localStorage.getItem(FIRST_DAY_KEY);
-  if(first)document.getElementById('statDays').textContent=Math.floor((Date.now()-parseInt(first))/86400000)+1;
   try{document.getElementById('statLogs').textContent=localStorage.getItem(LOG_COUNT_KEY)||0;}catch{}
 }
 
@@ -467,6 +639,29 @@ function addTyping(){showMessages();const msgs=document.getElementById('messages
 function removeTyping(){const t=document.getElementById('typingRow');if(t)t.remove();}
 
 // ─────────────────────────────────────────────
+// BUILD SYSTEM PROMPT WITH USER PROFILE
+// ─────────────────────────────────────────────
+function buildProfileContext() {
+  const auth = _currentUser || getLocalAuth();
+  if (!auth || !auth.uid) return '';
+  const profileKey = 'fitcore_profile_' + auth.uid;
+  let profile = null;
+  try { profile = JSON.parse(localStorage.getItem(profileKey)); } catch {}
+  if (!profile || !Object.keys(profile).length) return '';
+  const parts = [];
+  if (profile.nickname || profile.name) parts.push(`Name: ${profile.nickname || profile.name}`);
+  if (profile.gender)       parts.push(`Gender: ${profile.gender}`);
+  if (profile.age)          parts.push(`Age: ${profile.age}`);
+  if (profile.weight)       parts.push(`Weight: ${profile.weight}kg`);
+  if (profile.height)       parts.push(`Height: ${profile.height}cm`);
+  if (profile.goal)         parts.push(`Goal: ${profile.goal}`);
+  if (profile.training_type)parts.push(`Training type: ${profile.training_type}`);
+  if (profile.days_per_week)parts.push(`Days per week: ${profile.days_per_week}`);
+  if (profile.fitness_level)parts.push(`Fitness level: ${profile.fitness_level}`);
+  return parts.length ? '\n\nUser profile:\n' + parts.map(p => `  · ${p}`).join('\n') : '';
+}
+
+// ─────────────────────────────────────────────
 // SEND MESSAGE
 // ─────────────────────────────────────────────
 async function sendMessage(){
@@ -476,7 +671,7 @@ async function sendMessage(){
   const userTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   addMsg(text,'user');chatLog.push({role:'user',content:text,time:userTime});saveChatLog();updateMetrics();addTyping();
   try{
-    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,user_id:getUserId(),history:chatLog.slice(-24).map(m=>({role:m.role,content:m.content}))})});
+    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,user_id:getUserId(),page:'chat',history:chatLog.slice(-24).map(m=>({role:m.role,content:m.content}))})});
     if(!res.ok)throw new Error();const data=await res.json();removeTyping();
     const botTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     addMsg(data.reply,'bot');chatLog.push({role:'assistant',content:data.reply,time:botTime});saveChatLog();updateMetrics();
@@ -500,17 +695,33 @@ function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)
 (async function init(){
   const ok=await initAuth();if(!ok)return;
   if(!localStorage.getItem(FIRST_DAY_KEY))localStorage.setItem(FIRST_DAY_KEY,Date.now().toString());
+
+  // Update streak (must happen before renderProfileBtn so sidebar stat is correct)
+  updateStreak();
+
   renderProfileBtn();
   updateDailyTip();
   const hadHistory=loadChatLog();
   if(hadHistory)showMessages();
   else{
     const a=_currentUser||getLocalAuth();
-    const name=a?.name?.split(' ')[0]||'Champ';
-    addMsg(`Hey **${name}**! 💪 I'm **FITCORE.AI** — your personal AI fitness and wellness coach.\n\nTell me your goal and I'll build a complete plan around you — whether it's muscle gain, fat loss, stress relief, or better sleep.\n\nTry: *"Create a 7-day PPL workout plan for an intermediate gym-goer"*`,'bot');
+    const profile = (() => { try { return JSON.parse(localStorage.getItem('fitcore_profile_' + (a?.uid||''))); } catch { return null; } })();
+    const callName = profile?.nickname || a?.name?.split(' ')[0] || 'Champ';
+    const greetEl = document.getElementById('greetName');
+    if (greetEl) greetEl.textContent = callName.toUpperCase();
+    addMsg(`Hey **${callName}**! 💪 I'm **FITCORE.AI** — your personal AI fitness and wellness coach.\n\nTell me your goal and I'll build a complete plan around you — whether it's muscle gain, fat loss, stress relief, or better sleep.\n\nTry: *"Create a 7-day PPL workout plan for an intermediate gym-goer"*`,'bot');
   }
-  updateMetrics();checkExistingPlan();
+
+  updateMetrics();
+  checkExistingPlan();
+  checkProfileComplete();
   document.getElementById('userInput').focus();
+
+  // Sync user to backend
+  const a=_currentUser||getLocalAuth();
+  if(a&&a.uid){
+    fetch(`${BACKEND}/user/sync`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:a.uid,name:a.name,email:a.email,picture:a.picture,provider:a.provider||'email'})}).catch(()=>{});
+  }
 })();
 </script>
 </body>

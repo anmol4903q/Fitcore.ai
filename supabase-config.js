@@ -4,21 +4,30 @@
 // ═══════════════════════════════════════════════════════════
 
 // ── SUPABASE SETUP ────
-const SUPABASE_URL    = 'https://eswkbttcgeqbuuadxnbg.supabase.co';
-const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzd2tidHRjZ2VxYnV1YWR4bmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxOTcwMTYsImV4cCI6MjA5Mjc3MzAxNn0.ujQh3jK2EMUAiO3s28Edh7mdl45KYuQ1-3TpnaPJXKY';
+const SUPABASE_URL  = 'https://eswkbttcgeqbuuadxnbg.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzd2tidHRjZ2VxYnV1YWR4bmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxOTcwMTYsImV4cCI6MjA5Mjc3MzAxNn0.ujQh3jK2EMUAiO3s28Edh7mdl45KYuQ1-3TpnaPJXKY';
 
-// Load Supabase client (loaded via CDN in HTML)
 let _supabase = null;
+
 function getSupabase() {
   if (!_supabase) {
-    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    // Guard: CDN may not have loaded yet, or may be blocked
+    if (typeof supabase === 'undefined' || typeof supabase.createClient !== 'function') {
+      return null;
+    }
+    try {
+      _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    } catch (e) {
+      console.warn('Supabase client init failed:', e.message);
+      return null;
+    }
   }
   return _supabase;
 }
 
-// ── AUTH STATE ───────────────────────────────────────────────
-const AUTH_KEY     = 'fitcore_auth_v3';
-const SESSION_KEY  = 'fitcore_session_v1';
+// ── AUTH STATE ────────────────────────────────────────────────
+const AUTH_KEY    = 'fitcore_auth_v3';
+const SESSION_KEY = 'fitcore_session_v1';
 
 function getLocalAuth() {
   try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; } catch { return null; }
@@ -29,12 +38,10 @@ function clearLocalAuth() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-// ── USER ID (FIXED) ──────────────────────────────────────────
+// ── USER ID ───────────────────────────────────────────────────
 function getUserId() {
   const auth = getLocalAuth();
   if (auth && auth.uid) return auth.uid;
-
-  // Fallback for guest mode — generate a stable anonymous id
   let id = localStorage.getItem('fitcore_user_id');
   if (!id) {
     id = 'guest_' + Math.random().toString(36).slice(2, 14) + Date.now().toString(36);
@@ -43,7 +50,7 @@ function getUserId() {
   return id;
 }
 
-// ── GUARD: redirect to auth if not logged in ─────────────────
+// ── GUARD: redirect to auth if not logged in ──────────────────
 function requireAuth() {
   const auth = getLocalAuth();
   if (!auth || !auth.uid) {
@@ -53,9 +60,10 @@ function requireAuth() {
   return true;
 }
 
-// ── SUPABASE SIGN IN WITH GOOGLE ─────────────────────────────
+// ── GOOGLE LOGIN ──────────────────────────────────────────────
 async function supabaseGoogleLogin() {
   const sb = getSupabase();
+  if (!sb) throw new Error('Supabase not available');
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -65,33 +73,33 @@ async function supabaseGoogleLogin() {
   if (error) throw error;
 }
 
-// ── SUPABASE EMAIL SIGN UP ───────────────────────────────────
+// ── EMAIL REGISTER ────────────────────────────────────────────
 async function supabaseRegister(email, password, name) {
   const sb = getSupabase();
+  if (!sb) throw new Error('Supabase not available');
   const { data, error } = await sb.auth.signUp({
     email,
     password,
-    options: {
-      data: { full_name: name, display_name: name }
-    }
+    options: { data: { full_name: name, display_name: name } }
   });
   if (error) throw error;
   return data;
 }
 
-// ── SUPABASE EMAIL LOGIN ─────────────────────────────────────
+// ── EMAIL LOGIN ───────────────────────────────────────────────
 async function supabaseLogin(email, password) {
   const sb = getSupabase();
+  if (!sb) throw new Error('Supabase not available');
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
 
-// ── SUPABASE SIGN OUT ────────────────────────────────────────
+// ── SIGN OUT ──────────────────────────────────────────────────
 async function supabaseSignOut() {
   try {
     const sb = getSupabase();
-    await sb.auth.signOut();
+    if (sb) await sb.auth.signOut();
   } catch (e) {
     console.warn('Supabase signOut failed:', e);
   }
@@ -99,21 +107,21 @@ async function supabaseSignOut() {
   window.location.href = 'auth.html';
 }
 
-// ── HANDLE SUPABASE SESSION (call on every page load) ────────
+// ── HANDLE SESSION ON PAGE LOAD ───────────────────────────────
 async function handleSupabaseSession() {
   try {
     const sb = getSupabase();
+    if (!sb) return getLocalAuth();
     const { data: { session } } = await sb.auth.getSession();
-
     if (session && session.user) {
       const user = session.user;
       const meta = user.user_metadata || {};
       const auth = {
-        uid:     user.id,
-        name:    meta.full_name || meta.name || meta.display_name || user.email.split('@')[0],
-        email:   user.email,
-        picture: meta.avatar_url || meta.picture || null,
-        mode:    user.app_metadata?.provider || 'email',
+        uid:      user.id,
+        name:     meta.full_name || meta.name || meta.display_name || user.email.split('@')[0],
+        email:    user.email,
+        picture:  meta.avatar_url || meta.picture || null,
+        mode:     user.app_metadata?.provider || 'email',
         provider: user.app_metadata?.provider || 'email'
       };
       setLocalAuth(auth);
@@ -122,14 +130,14 @@ async function handleSupabaseSession() {
   } catch (e) {
     console.warn('Supabase session error:', e.message);
   }
-  // Fall back to whatever is in localStorage
   return getLocalAuth();
 }
 
-// ── SAVE USER PROFILE TO SUPABASE DB ─────────────────────────
+// ── SAVE USER TO SUPABASE DB ──────────────────────────────────
 async function saveUserToSupabase(auth) {
   try {
     const sb = getSupabase();
+    if (!sb) return;
     await sb.from('users').upsert({
       id:         auth.uid,
       name:       auth.name,
@@ -143,13 +151,15 @@ async function saveUserToSupabase(auth) {
   }
 }
 
-// ── BACKEND FALLBACK
+// ── BACKEND URL ───────────────────────────────────────────────
 const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
 
-// Auto-listen for auth state changes
-(function listenAuth() {
+// ── AUTH STATE LISTENER ───────────────────────────────────────
+// Runs after DOM is ready to avoid race with CDN script load
+window.addEventListener('load', function () {
   try {
     const sb = getSupabase();
+    if (!sb) return; // CDN blocked or not loaded — fail silently
     sb.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         const user = session.user;
@@ -175,6 +185,6 @@ const BACKEND = 'https://fitcore-backend-ib8k.onrender.com';
       }
     });
   } catch (e) {
-    // Supabase not configured yet
+    // Supabase not configured — page still works normally
   }
-})();
+});

@@ -246,6 +246,18 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .rp-label{font-family:var(--font-mono);font-size:8.5px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:7px;}
 .tip-card{padding:13px;border:1px solid var(--border);border-radius:var(--radius);background:linear-gradient(135deg,var(--blue-soft),var(--cyan-soft));font-size:11.5px;color:var(--text-muted);line-height:1.65;}
 .tip-card strong{display:block;color:var(--blue-mid);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;font-weight:600;}
+.streak-card{padding:14px;border-radius:var(--radius);border:1.5px solid rgba(255,107,43,0.3);background:linear-gradient(135deg,#FFF4EE,#FFF0E0);}
+.streak-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.streak-flame{font-size:28px;line-height:1;}
+.streak-flame.inactive{filter:grayscale(1);opacity:0.35;}
+@keyframes flameGlow{0%,100%{filter:drop-shadow(0 0 4px #FF6B2B)}50%{filter:drop-shadow(0 0 12px #FF4500)}}
+.streak-flame.active{animation:flameGlow 2s ease-in-out infinite;}
+.streak-num{font-family:var(--font-display);font-size:36px;color:#FF6B2B;line-height:1;}
+.streak-num.inactive{color:var(--text-dim);}
+.streak-lbl{font-size:10px;color:#B07040;letter-spacing:.5px;text-transform:uppercase;}
+.streak-sub{font-size:11.5px;color:#B07040;line-height:1.5;}
+.locked-overlay{position:absolute;inset:0;background:rgba(244,247,255,0.7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;backdrop-filter:blur(2px);}
+.task-item.locked{opacity:0.6;cursor:not-allowed;pointer-events:none;position:relative;}
 .rp-week-row{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;padding:3px 0;}
 .rp-week-day{color:var(--text-muted);}
 .rp-week-type{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;font-weight:500;}
@@ -255,8 +267,10 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .toast.success{border-color:rgba(40,192,99,.4);color:var(--green);background:var(--green-soft);}
 .toast.error{border-color:rgba(229,62,62,.35);color:var(--red);}
 
-@media(max-width:900px){.sidebar{display:none;}}
-@media(max-width:700px){.sidebar,.right-panel{display:none;}.header-nav{display:none;}.tab-pane{padding:14px;}.week-grid{grid-template-columns:repeat(4,1fr);}.charts-grid{grid-template-columns:1fr;}}
+@media(max-width:1050px){.right-panel{display:none;}}
+@media(max-width:860px){.sidebar{display:none;}}
+@media(max-width:700px){.sidebar,.right-panel{display:none;}.header-nav{display:none;}.tab-pane{padding:12px;}.week-grid{grid-template-columns:repeat(4,1fr);}.charts-grid{grid-template-columns:1fr;}.form-row{flex-direction:column;}.tab-bar{overflow-x:scroll;}.tab-btn{padding:12px 14px;font-size:9px;}}
+@media(max-width:420px){.week-grid{grid-template-columns:repeat(3,1fr);}}
 </style>
 </head>
 <body>
@@ -425,6 +439,19 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 
   <!-- RIGHT PANEL -->
   <aside class="right-panel">
+    <div>
+      <div class="rp-label">Your Streak</div>
+      <div class="streak-card">
+        <div class="streak-row">
+          <span class="streak-flame inactive" id="rpFlame">🔥</span>
+          <div>
+            <div class="streak-num inactive" id="rpStreakNum">0</div>
+            <div class="streak-lbl">Day Streak</div>
+          </div>
+        </div>
+        <div class="streak-sub" id="rpStreakSub">Open the app daily to build your streak!</div>
+      </div>
+    </div>
     <div><div class="rp-label">Active Mode</div><div class="tip-card"><strong>Progress Tracker</strong>Track daily workouts, weight, and completion rates. Plans auto-sync from Workout Planner.</div></div>
     <div>
       <div class="rp-label">This Week's Plan</div>
@@ -589,11 +616,13 @@ function renderChecklist(){
     else el.innerHTML='<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">No exercises yet. Add custom tasks above or <a href="workout.html" style="color:var(--blue-mid)">regenerate your plan</a>.</div>';
     updateTodayProgress(0,0);return;
   }
+  const today2=todayStr();
   todayTasks.forEach(task=>{
-    const item=document.createElement('div');item.className='task-item'+(task.completed?' done':'');item.dataset.id=task.id;
+    const isPast=task._date&&task._date!==today2;
+    const item=document.createElement('div');item.className='task-item'+(task.completed?' done':'')+(isPast?' locked':'');item.dataset.id=task.id;
     const badge=task.badge||task.day_type||'workout';
-    item.innerHTML=`<div class="task-checkbox"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="task-text">${escHtml(task.task_text)}</span><span class="task-badge ${badge}">${badge}</span>`;
-    item.addEventListener('click',()=>toggleTask(task,item));
+    item.innerHTML=`<div class="task-checkbox"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="task-text">${escHtml(task.task_text)}</span><span class="task-badge ${badge}">${badge}</span>${isPast?'<span title="Past workouts are locked">🔒</span>':''}`;
+    if(!isPast)item.addEventListener('click',()=>toggleTask(task,item));
     el.appendChild(item);
   });
   updateTodayProgress(todayTasks.filter(t=>t.completed).length,todayTasks.length);
@@ -759,6 +788,12 @@ async function saveWeight(){
   try{
     const res=await fetch(`${BACKEND}/progress`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:getUserId(),weight,workout_done:workout})});
     if(!res.ok)throw new Error();
+    // Also push to Supabase via backend
+    try{
+      const sb=getSupabase();if(sb){
+        await sb.from('progress').upsert({user_id:getUserId(),date:todayStr(),weight,workout_done:workout},{onConflict:'user_id,date'});
+      }
+    }catch{}
     showSaveStatus('Saved ✓','success');await loadWeightData();
   }catch{showSaveStatus('Failed — check connection.','error');}
 }
@@ -787,9 +822,49 @@ function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
+// ── STREAK LOGIC ─────────────────────────────
+const STREAK_KEY='fitcore_streak_v1';
+function getTodayStr2(){return new Date().toISOString().slice(0,10);}
+function loadAndRenderStreak(){
+  let sd={count:0,lastDate:null};
+  try{const r=localStorage.getItem(STREAK_KEY);if(r)sd=JSON.parse(r);}catch{}
+  const today=getTodayStr2();
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  const yStr=yesterday.toISOString().slice(0,10);
+  let count=sd.count||0;
+  const visitedToday=sd.lastDate===today;
+  if(!visitedToday){
+    if(sd.lastDate===yStr)count++;
+    else if(!sd.lastDate)count=1;
+    else count=1;
+    localStorage.setItem(STREAK_KEY,JSON.stringify({count,lastDate:today}));
+  }
+  // Render
+  const flame=document.getElementById('rpFlame');
+  const num=document.getElementById('rpStreakNum');
+  const sub=document.getElementById('rpStreakSub');
+  if(count>0&&(visitedToday||true)){
+    if(flame){flame.className='streak-flame active';}
+    if(num){num.className='streak-num';num.textContent=count;}
+    if(sub)sub.textContent=count>=7?`${count} days strong — incredible! 🏆`:`${count} day${count>1?'s':''} — come back tomorrow to keep it going!`;
+  }
+}
+
+// ── PAST DAY LOCK ─────────────────────────────
+// Tasks from past dates cannot be edited
+function isToday(dateStr){return dateStr===getTodayStr2();}
+// We pass date into toggleTask — if not today, block
+async function toggleTaskSafe(taskObj,itemEl,dateStr){
+  if(dateStr&&!isToday(dateStr)){
+    showToast('Past workouts cannot be edited.','error');return;
+  }
+  await toggleTask(taskObj,itemEl);
+}
+
 (async function init(){
   const ok=await initAuth();if(!ok)return;
   renderProfileBtn();
+  loadAndRenderStreak();
   document.getElementById('sbWeek').textContent='W'+getWeekNumber();
   await loadTodayTasks();
   updateRightPanel();

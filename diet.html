@@ -296,9 +296,12 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .toast.success{border-color:rgba(40,192,99,.4);color:var(--green);background:var(--green-soft);}
 .toast.error{border-color:rgba(229,62,62,.35);color:var(--red);}
 
-@media(max-width:1000px){.tools-panel{width:300px;}}
-@media(max-width:860px){.tools-panel{display:none;}}
+@media(max-width:1100px){.tools-panel{width:300px;}}
+@media(max-width:900px){.right-panel{display:none;}}
+@media(max-width:800px){.tools-panel{position:fixed;top:54px;left:0;bottom:0;z-index:100;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow-lg);display:flex!important;width:300px;}.tools-panel.open{transform:translateX(0);}.tools-overlay{display:none;position:fixed;inset:0;top:54px;background:rgba(0,0,0,0.28);z-index:99;}.tools-overlay.open{display:block;}.tools-toggle-btn{display:flex!important;}}
 @media(max-width:700px){.sidebar,.right-panel{display:none;}.header-nav{display:none;}.messages{padding:14px;}.bubble{max-width:calc(100vw - 76px);}.quick-prompts{padding:0 14px 8px;}.input-bar{padding:8px 14px 14px;}.input-hint{display:none;}}
+.tools-toggle-btn{display:none;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid var(--border-mid);border-radius:9px;background:var(--amber-soft);color:var(--amber);font-family:var(--font-body);font-size:12.5px;font-weight:500;cursor:pointer;flex-shrink:0;}
+.tools-toggle-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
 </style>
 </head>
 <body>
@@ -321,8 +324,12 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
     <a class="hn-tab" href="mental.html"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Wellness</a>
     <a class="hn-tab" href="progress.html"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Progress</a>
   </nav>
+  <button class="tools-toggle-btn" id="toolsToggleBtn" onclick="toggleToolsPanel()">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Tools
+  </button>
   <div class="profile-wrap" id="profileWrap"></div>
 </header>
+<div class="tools-overlay" id="toolsOverlay" onclick="closeToolsPanel()"></div>
 
 <div class="layout">
   <aside class="sidebar">
@@ -347,7 +354,7 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
   <div class="main-area">
 
     <!-- TOOLS PANEL -->
-    <div class="tools-panel">
+    <div class="tools-panel" id="toolsPanel">
 
       <!-- 1. MACRO CALCULATOR -->
       <div class="tool-section">
@@ -531,6 +538,43 @@ async function initAuth(){
   return true;
 }
 
+// ─── AUTO-FILL MACRO CALC FROM PROFILE ──────
+function prefillFromProfile(){
+  const uid=(_currentUser||getLocalAuth())?.uid;if(!uid)return;
+  let profile=null;try{profile=JSON.parse(localStorage.getItem('fitcore_profile_'+uid));}catch{}
+  if(!profile)return;
+  if(profile.weight){const w=document.getElementById('mfWeight');if(w&&!w.value)w.value=profile.weight_unit==='lbs'?Math.round(profile.weight*0.453592):profile.weight;}
+  if(profile.height){const h=document.getElementById('mfHeight');if(h&&!h.value)h.value=profile.height_unit==='ft'?Math.round(profile.height*30.48):profile.height;}
+  if(profile.age){const a=document.getElementById('mfAge');if(a&&!a.value)a.value=profile.age;}
+  if(profile.gender){const s=document.getElementById('mfSex');if(s)s.value=profile.gender==='female'?'female':'male';}
+  if(profile.goal){const g=document.getElementById('mfGoal');if(g){const map={bulk:'bulk',cut:'cut',maintain:'maintain',strength:'maintain',endurance:'maintain'};g.value=map[profile.goal]||'maintain';}}
+}
+
+// ─── TOOLS PANEL MOBILE TOGGLE ───────────────
+function toggleToolsPanel(){
+  const panel=document.getElementById('toolsPanel');
+  const overlay=document.getElementById('toolsOverlay');
+  panel?.classList.toggle('open');overlay?.classList.toggle('open');
+}
+function closeToolsPanel(){
+  document.getElementById('toolsPanel')?.classList.remove('open');
+  document.getElementById('toolsOverlay')?.classList.remove('open');
+}
+
+// ─── SUPABASE FOOD LOG SYNC ──────────────────
+async function syncFoodLogToSupabase(items){
+  const uid=(_currentUser||getLocalAuth())?.uid;if(!uid)return;
+  try{
+    await fetch(`${BACKEND}/diet/foodlog`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid,date:todayStr(),items})});
+  }catch(e){console.warn('Food log sync failed:',e.message);}
+}
+async function syncWaterToSupabase(cups){
+  const uid=(_currentUser||getLocalAuth())?.uid;if(!uid)return;
+  try{
+    await fetch(`${BACKEND}/diet/water`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid,date:todayStr(),cups})});
+  }catch(e){console.warn('Water sync failed:',e.message);}
+}
+
 // ─────────────────────────────────────────────
 // PROFILE BUTTON
 // ─────────────────────────────────────────────
@@ -625,7 +669,7 @@ function addFoodItem(){
   const fat=parseFloat(document.getElementById('flFat').value)||0;
   if(!name){showToast('Please enter a food name.','error');return;}
   const items=getFoodLog();items.push({id:Date.now(),name,cals,protein:prot,carbs,fat});
-  saveFoodLog(items);
+  saveFoodLog(items);syncFoodLogToSupabase(items);
   ['flFood','flCals','flProt','flCarbs','flFat'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('flFood').focus();
   renderFoodLog();showToast(`${name} logged ✓`,'success');
@@ -683,7 +727,7 @@ function updateIntakeBars(tot){
 const WATER_GOAL=8;
 function getWaterCount(){try{const all=JSON.parse(localStorage.getItem(WATER_KEY)||'{}');return all[todayStr()]||0;}catch{return 0;}}
 function saveWaterCount(n){try{const all=JSON.parse(localStorage.getItem(WATER_KEY)||'{}');all[todayStr()]=n;localStorage.setItem(WATER_KEY,JSON.stringify(all));}catch{}}
-function addWater(){const n=Math.min(WATER_GOAL,getWaterCount()+1);saveWaterCount(n);renderWater();updateSidebar();if(n===WATER_GOAL)showToast('🎉 Daily water goal reached! 2000ml ✓','success');}
+function addWater(){const n=Math.min(WATER_GOAL,getWaterCount()+1);saveWaterCount(n);syncWaterToSupabase(n);renderWater();updateSidebar();if(n===WATER_GOAL)showToast('🎉 Daily water goal reached! 2000ml ✓','success');}
 function resetWater(){saveWaterCount(0);renderWater();updateSidebar();}
 function renderWater(){
   const n=getWaterCount();const ml=n*250;const p=Math.round(n/WATER_GOAL*100);
@@ -847,6 +891,7 @@ function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)
     document.getElementById('rcCarbs').textContent=macroTargets.carbs+'g';
     document.getElementById('rcFat').textContent=macroTargets.fat+'g';
   }
+  prefillFromProfile();
   const hadHistory=loadChatLog();
   if(hadHistory)showMessages();
   updateSidebar();

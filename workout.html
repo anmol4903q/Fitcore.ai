@@ -232,8 +232,9 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
 .toast.success{border-color:rgba(40,192,99,.4);color:var(--green);background:var(--green-soft);}
 .toast.error{border-color:rgba(229,62,62,.35);color:var(--red);}
 
-@media(max-width:900px){.sidebar{display:none;}}
-@media(max-width:700px){.sidebar,.right-panel{display:none;}.header-nav{display:none;}.messages{padding:14px;}.bubble{max-width:calc(100vw - 76px);}.quick-prompts{padding:0 14px 8px;}.input-bar{padding:8px 14px 14px;}.input-hint{display:none;}}
+@media(max-width:1050px){.right-panel{display:none;}}
+@media(max-width:860px){.sidebar{display:none;}}
+@media(max-width:700px){.sidebar,.right-panel{display:none;}.header-nav{display:none;}.messages{padding:14px;}.bubble{max-width:calc(100vw - 76px);}.quick-prompts{padding:0 14px 8px;}.input-bar{padding:8px 14px 14px;}.input-hint{display:none;}.plan-banner{flex-wrap:wrap;gap:8px;}.pb-actions{width:100%;justify-content:flex-end;}}
 </style>
 </head>
 <body>
@@ -314,6 +315,7 @@ header{position:relative;z-index:50;flex-shrink:0;height:var(--header-h);display
         <button class="empty-chip" onclick="quickSend('Build me an advanced 6-day PPL program with progressive overload')">⚡ Advanced 6-day PPL</button>
         <button class="empty-chip" onclick="quickSend('Give me just a Push day workout for chest, shoulders and triceps')">💪 Push day only</button>
         <button class="empty-chip" onclick="quickSend('What is progressive overload and how do I apply it to training?')">📈 Progressive overload</button>
+        <button class="empty-chip" id="profileChip" onclick="sendWithProfile()" style="border-color:var(--lime-dark);color:var(--lime-dark);background:var(--lime-soft);">🎯 Build plan from my profile</button>
       </div>
     </div>
 
@@ -598,14 +600,44 @@ function showPlanSavedNotice(parsed){
 // ─────────────────────────────────────────────
 // SEND MESSAGE
 // ─────────────────────────────────────────────
+// ── PROFILE CONTEXT ─────────────────────────
+function getProfileContext(){
+  const uid=(_currentUser||getLocalAuth())?.uid;if(!uid)return'';
+  let p=null;try{p=JSON.parse(localStorage.getItem('fitcore_profile_'+uid));}catch{}
+  if(!p||!p.goal)return'';
+  const goalMap={bulk:'build muscle (bulk)',cut:'lose fat (cut)',maintain:'stay fit',strength:'build strength',endurance:'build endurance'};
+  const trainMap={gym:'gym with full equipment',home_dumbbell:'home with dumbbells',calisthenics:'bodyweight/calisthenics',hybrid:'hybrid gym+home'};
+  const levelMap={beginner:'beginner',intermediate:'intermediate',advanced:'advanced'};
+  const wt=p.weight?(p.weight_unit==='lbs'?Math.round(p.weight*0.453592):p.weight)+'kg':'';
+  const ht=p.height?(p.height_unit==='ft'?Math.round(p.height*30.48):p.height)+'cm':'';
+  return`[User profile: ${levelMap[p.fitness_level]||p.fitness_level||''} ${p.gender||''}, ${wt} ${ht}, goal: ${goalMap[p.goal]||p.goal}, trains: ${trainMap[p.training_type]||p.training_type}, ${p.days_per_week||4} days/week]`;
+}
+
+function sendWithProfile(){
+  const uid=(_currentUser||getLocalAuth())?.uid;if(!uid)return;
+  let p=null;try{p=JSON.parse(localStorage.getItem('fitcore_profile_'+uid));}catch{}
+  if(!p||!p.goal){showToast('Complete your profile setup first!','error');setTimeout(()=>window.location.href='profile-setup.html',1500);return;}
+  const goalMap={bulk:'build muscle (bulking)',cut:'lose fat (cutting)',maintain:'stay fit and maintain weight',strength:'build strength',endurance:'build cardiovascular endurance'};
+  const trainMap={gym:'gym with full equipment (barbells, machines, cables, dumbbells)',home_dumbbell:'home with dumbbells and basic equipment',calisthenics:'bodyweight/calisthenics only',hybrid:'hybrid of gym and home exercises'};
+  const levelMap={beginner:'beginner',intermediate:'intermediate',advanced:'advanced'};
+  const wt=p.weight?(p.weight_unit==='lbs'?Math.round(p.weight*0.453592):p.weight)+'kg':'';
+  const ht=p.height?(p.height_unit==='ft'?Math.round(p.height*30.48):p.height)+'cm':'';
+  const prompt=`Create a complete personalised 7-day workout plan for me. My profile: ${levelMap[p.fitness_level]||'intermediate'} level, ${p.gender||''}, ${wt} ${ht}, age ${p.age||''}. Goal: ${goalMap[p.goal]||p.goal}. I train: ${trainMap[p.training_type]||p.training_type}. Available ${p.days_per_week||4} days per week. Include sets, reps, and rest times. Label each day clearly as Monday — Push Day, Tuesday — Pull Day, etc.`;
+  document.getElementById('userInput').value=prompt;
+  sendMessage();
+}
+
 async function sendMessage(){
   const input=document.getElementById('userInput');const sendBtn=document.getElementById('sendBtn');
   const text=(input.value||'').trim();if(!text)return;
   input.value='';input.style.height='auto';sendBtn.disabled=true;
   const userTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   addMsg(text,'user');chatLog.push({role:'user',content:text,time:userTime});saveChatLog();addTyping();
+  // Inject profile context if message looks like a plan request
+  const profileCtx=looksLikePlan(text)?getProfileContext():'';
+  const msgWithCtx=profileCtx?`${profileCtx}\n\n${text}`:text;
   try{
-    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,user_id:getUserId(),history:chatLog.slice(-24).map(m=>({role:m.role,content:m.content}))})});
+    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msgWithCtx,user_id:getUserId(),history:chatLog.slice(-24).map(m=>({role:m.role,content:m.content}))})});
     if(!res.ok)throw new Error();const data=await res.json();removeTyping();
     const botTime=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     addMsg(data.reply,'bot');chatLog.push({role:'assistant',content:data.reply,time:botTime});saveChatLog();
@@ -645,8 +677,16 @@ function showToast(msg,type=''){const ex=document.querySelector('.toast');if(ex)
   if(hadHistory)showMessages();
   else{
     const a=_currentUser||getLocalAuth();
-    const name=a?.name?.split(' ')[0]||'Champ';
-    addMsg(`**Workout Planner** ready, ${name}! 🏋️\n\nTell me:\n- Your **fitness level** (beginner / intermediate / advanced)\n- **Days per week** you can train\n- Your **goal** (muscle gain, fat loss, strength, endurance)\n- **Equipment** (gym / home / none)\n\nI'll build a complete plan with Push, Pull, Legs, Core and Rest days — auto-saved to your Progress Tracker as a daily checklist.`,'bot');
+    const uid=a?.uid;
+    let profile=null;try{profile=JSON.parse(localStorage.getItem('fitcore_profile_'+uid));}catch{}
+    const callName=profile?.nickname||a?.name?.split(' ')[0]||'Champ';
+    if(profile&&profile.goal){
+      const goalMap={bulk:'build muscle',cut:'lose fat',maintain:'stay fit',strength:'build strength',endurance:'build endurance'};
+      const trainMap={gym:'gym',home_dumbbell:'home+dumbbells',calisthenics:'calisthenics',hybrid:'hybrid'};
+      addMsg(`**Workout Planner** ready, ${callName}! 🏋️\n\nI can see your profile — **${profile.fitness_level||'intermediate'} level**, goal: **${goalMap[profile.goal]||profile.goal}**, training: **${trainMap[profile.training_type]||profile.training_type}**, **${profile.days_per_week||4} days/week**.\n\nHit **"Build plan from my profile"** below to generate your personalised plan instantly, or ask me anything about training.`,'bot');
+    } else {
+      addMsg(`**Workout Planner** ready, ${callName}! 🏋️\n\nTell me:\n- Your **fitness level** (beginner / intermediate / advanced)\n- **Days per week** you can train\n- Your **goal** (muscle gain, fat loss, strength, endurance)\n- **Equipment** (gym / home / none)\n\nI'll build a complete plan with Push, Pull, Legs, Core and Rest days — auto-saved to your Progress Tracker as a daily checklist.`,'bot');
+    }
   }
   document.getElementById('userInput').focus();
 })();
